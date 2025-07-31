@@ -24,29 +24,29 @@ export enum UserStatus {
 @Entity('users')
 export class User {
   @ApiProperty({
-    description: 'Identifiant unique de l\'utilisateur',
-    example: 'uuid-string'
+    description: "Identifiant unique de l'utilisateur",
+    example: 'uuid-string',
   })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @ApiProperty({
-    description: 'Email de l\'utilisateur (unique)',
-    example: 'user@digifaz.com'
+    description: "Email de l'utilisateur (unique)",
+    example: 'user@digifaz.com',
   })
   @Column({ length: 150, unique: true })
   email: string;
 
   @ApiProperty({
     description: 'Mot de passe hashé',
-    writeOnly: true
+    writeOnly: true,
   })
   @Column({ select: false })
   password: string;
 
   @ApiProperty({
-    description: 'Nom complet de l\'utilisateur',
-    example: 'Jean Dupont'
+    description: "Nom complet de l'utilisateur",
+    example: 'Jean Dupont',
   })
   @Column({ length: 200 })
   fullName: string;
@@ -54,15 +54,15 @@ export class User {
   @ApiProperty({
     description: 'Numéro de téléphone (optionnel)',
     example: '+237690123456',
-    required: false
+    required: false,
   })
   @Column({ length: 20, nullable: true })
   phone?: string;
 
   @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
+    description: "Rôle de l'utilisateur",
     enum: UserRole,
-    example: UserRole.USER
+    example: UserRole.USER,
   })
   @Column({
     type: 'enum',
@@ -74,7 +74,7 @@ export class User {
   @ApiProperty({
     description: 'Statut du compte utilisateur',
     enum: UserStatus,
-    example: UserStatus.ACTIVE
+    example: UserStatus.ACTIVE,
   })
   @Column({
     type: 'enum',
@@ -85,14 +85,14 @@ export class User {
 
   @ApiProperty({
     description: 'Date de création du compte',
-    example: '2024-01-01T00:00:00.000Z'
+    example: '2024-01-01T00:00:00.000Z',
   })
   @CreateDateColumn()
   createdAt: Date;
 
   @ApiProperty({
     description: 'Date de dernière modification',
-    example: '2024-01-01T00:00:00.000Z'
+    example: '2024-01-01T00:00:00.000Z',
   })
   @UpdateDateColumn()
   updatedAt: Date;

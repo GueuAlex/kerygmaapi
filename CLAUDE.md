@@ -99,3 +99,8 @@ Chaque module suit la structure standard :
 Les modules metier sont commentes dans `app.module.ts` par defaut. Decommenter selon les besoins du developpement.
 
 Le projet utilise pnpm comme gestionnaire de packages et ESLint avec TypeScript pour la qualite du code.
+
+## Directives specifiques
+
+### Processus de versionnement et deploiement
+- Pour les commits, push et deploiements, je (le developpeur) indiquerai quand les effectuer

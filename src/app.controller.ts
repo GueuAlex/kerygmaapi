@@ -10,14 +10,14 @@ export class AppController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'Informations de l\'application' })
+  @ApiOperation({ summary: "Informations de l'application" })
   getHello(): { name: string; version: string } {
     return this.appService.getHello();
   }
 
   @Public()
   @Get('health')
-  @ApiOperation({ summary: 'Vérification santé de l\'API' })
+  @ApiOperation({ summary: "Vérification santé de l'API" })
   health(): { status: string; timestamp: string } {
     return {
       status: 'ok',

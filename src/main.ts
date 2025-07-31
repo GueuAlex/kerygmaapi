@@ -23,7 +23,7 @@ async function bootstrap() {
 
   // Configuration Swagger
   const config = new DocumentBuilder()
-    .setTitle('DIGIFAZ API')
+    .setTitle('KERYGMA API REST FULL')
     .setDescription(
       `
 API pour la gestion des paroisses et services religieux
@@ -69,7 +69,7 @@ Pour utiliser les endpoints protégés, vous devez :
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document, {
-    customSiteTitle: 'DIGIFAZ API Documentation',
+    customSiteTitle: 'Kerygma API Documentation',
     customCssUrl:
       'https://cdn.jsdelivr.net/npm/swagger-ui-themes@3.0.1/themes/3.x/theme-material.css',
     swaggerOptions: {
@@ -84,7 +84,7 @@ Pour utiliser les endpoints protégés, vous devez :
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  console.log(`🚀 DIGIFAZ API démarrée sur http://localhost:${port}`);
+  console.log(`🚀 Kerygma API démarrée sur http://localhost:${port}`);
   console.log(`📚 Documentation Swagger : http://localhost:${port}/api-docs`);
   console.log(`🔗 JSON Schema : http://localhost:${port}/api-docs-json`);
 }

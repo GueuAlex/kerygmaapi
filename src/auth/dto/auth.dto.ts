@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
@@ -51,7 +58,21 @@ export class RegisterDto {
     example: '+237690123456',
     required: false,
   })
+  @IsOptional()
+  @IsString({ message: 'Téléphone doit être une chaine' })
   phone?: string;
+
+  @ApiProperty({
+    description: "Rôle de l'utilisateur (optionnel, défaut: user)",
+    enum: ['admin', 'priest', 'parish_admin', 'user'],
+    example: 'user',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(['admin', 'priest', 'parish_admin', 'user'], {
+    message: 'Rôle doit être: admin, priest, parish_admin ou user',
+  })
+  role?: string;
 }
 
 export class AuthResponseDto {
