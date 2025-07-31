@@ -70,6 +70,7 @@ DEPLOY_MANUAL.md
 environments/*/.env
 environments/*/.env.template
 scripts/deploy_direct.sh
+scripts/deploy-manual.sh
 
 # Fichiers de backup
 backup/
