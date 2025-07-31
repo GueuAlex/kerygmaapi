@@ -1,3 +1,29 @@
+# 🏛️ DIGIFAZ - Système de Gestion Paroissiale
+
+[![CI/CD Pipeline](https://github.com/GueuAlex/kerygmaapi/actions/workflows/ci.yml/badge.svg)](https://github.com/GueuAlex/kerygmaapi/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/GueuAlex/kerygmaapi/actions/workflows/security.yml/badge.svg)](https://github.com/GueuAlex/kerygmaapi/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **DIGIFAZ** est une API complète de gestion paroissiale développée avec NestJS et TypeScript, conçue pour moderniser l'administration des paroisses.
+
+## ✨ Fonctionnalités
+
+- 👥 **Gestion des fidèles** : Inscription, profils, authentification JWT
+- ⛪ **Administration paroissiale** : Gestion des paroisses et hiérarchies  
+- 🙏 **Demandes de messes** : Planification et réservations de messes
+- 💰 **Système de paiement** : Intégration Wave, Orange Money, MTN, MOOV
+- 📊 **Contributions & Offrandes** : Suivi des dons et contributions
+- 📈 **Rapports** : Tableaux de bord et analytics
+- 🔔 **Notifications** : Email et SMS automatisés
+
+## 🚀 Technologies
+
+- **Backend** : NestJS, TypeScript, TypeORM
+- **Base de données** : MySQL 8.0
+- **Conteneurisation** : Docker & Docker Compose
+- **CI/CD** : GitHub Actions
+- **Sécurité** : JWT, Guards, Validation pipes
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
