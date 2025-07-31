@@ -1,0 +1,149 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ vars.APP_URL }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build application
+      run: pnpm run build
+
+    - name: Create deployment archive
+      run: |
+        tar -czf digifaz-deploy.tar.gz \
+          src/ \
+          docker/ \
+          environments/ \
+          package.json \
+          pnpm-lock.yaml \
+          tsconfig.json \
+          tsconfig.build.json \
+          nest-cli.json \
+          .dockerignore \
+          .prettierrc \
+          eslint.config.mjs \
+          README.md \
+          CLAUDE.md
+
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        script: |
+          # Variables
+          APP_DIR="/opt/kerygmaapi"
+          BACKUP_DIR="/opt/backups/kerygmaapi-$(date +%Y%m%d-%H%M%S)"
+          
+          # Creer dossier de backup
+          mkdir -p /opt/backups
+          
+          # Backup de l'ancienne version si elle existe
+          if [ -d "$APP_DIR" ]; then
+            echo "Backup de l'ancienne version..."
+            cp -r "$APP_DIR" "$BACKUP_DIR"
+          fi
+          
+          # Arreter les services
+          if [ -f "$APP_DIR/docker/docker-compose.prod.yml" ]; then
+            cd "$APP_DIR"
+            docker-compose -f docker/docker-compose.prod.yml down || true
+          fi
+          
+          # Nettoyer le repertoire
+          rm -rf "$APP_DIR"
+          mkdir -p "$APP_DIR"
+
+    - name: Upload deployment archive
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        source: "digifaz-deploy.tar.gz"
+        target: "/opt/"
+
+    - name: Extract and deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        script: |
+          cd /opt
+          tar -xzf digifaz-deploy.tar.gz -C kerygmaapi --strip-components=1
+          cd kerygmaapi
+          
+          # Creer le fichier .env de production
+          cp environments/prod/.env .env
+          
+          # Demarrer les services
+          docker-compose -f docker/docker-compose.prod.yml --env-file environments/prod/.env up --build -d
+          
+          # Attendre que les services soient prets
+          sleep 30
+          
+          # Verifier le deploiement
+          curl -f http://localhost:3001/health || exit 1
+          
+          # Nettoyer
+          rm -f /opt/digifaz-deploy.tar.gz
+
+    - name: Health check
+      run: |
+        sleep 10
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.VPS_HOST }}:3001/health)
+        if [ $response -eq 200 ]; then
+          echo "✅ Deployment successful - Health check passed"
+        else
+          echo "❌ Deployment failed - Health check failed (HTTP $response)"
+          exit 1
+        fi
+
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "🚀 DIGIFAZ deployed successfully to ${{ github.event.inputs.environment || 'production' }}"
+        else
+          echo "💥 DIGIFAZ deployment failed"
+        fi

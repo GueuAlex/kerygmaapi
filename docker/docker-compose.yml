@@ -1,0 +1,75 @@
+services:
+  app:
+    container_name: digifaz-nest-dev
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      target: development # Utilise le stage development
+    restart: unless-stopped
+    env_file:
+      - ../environments/dev/.env.template
+    ports:
+      - '${APP_EXTERNAL_PORT:-3000}:3000'
+    volumes:
+      # Monter le code source pour le hot-reload en dev
+      - ../src:/app/src:ro
+      - ../package.json:/app/package.json:ro
+      - ../tsconfig.json:/app/tsconfig.json:ro
+      - ../nest-cli.json:/app/nest-cli.json:ro
+      # Exclure node_modules pour éviter les conflits
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - digifaz-network
+
+  db:
+    image: mysql:8.0
+    container_name: digifaz-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-digifaz}
+      MYSQL_USER: ${MYSQL_USER:-dev}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-devpass}
+    ports:
+      - '${DB_EXTERNAL_PORT:-3306}:3306'
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD:-root}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - digifaz-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: digifaz-phpmyadmin-dev
+    restart: unless-stopped
+    environment:
+      PMA_HOST: ${PMA_HOST:-db}
+      PMA_PORT: ${PMA_PORT:-3306}
+      PMA_USER: ${PMA_USER:-dev}
+      PMA_PASSWORD: ${PMA_PASSWORD:-devpass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - '${PHPMYADMIN_EXTERNAL_PORT:-8081}:80'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - digifaz-network
+
+networks:
+  digifaz-network:
+    driver: bridge
+
+volumes:
+  db_data:

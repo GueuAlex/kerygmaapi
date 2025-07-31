@@ -1,0 +1,66 @@
+services:
+  app:
+    container_name: digifaz-nest-test
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      target: development # Utilise le stage development pour les tests
+    restart: unless-stopped
+    env_file:
+      - ../environments/test/.env.template
+    ports:
+      - '${APP_EXTERNAL_PORT:-3002}:3000'
+    environment:
+      - NODE_ENV=test
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - digifaz-test-network
+
+  db:
+    image: mysql:8.0
+    container_name: digifaz-mysql-test
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - '${DB_EXTERNAL_PORT:-3308}:3306'
+    volumes:
+      - db_data_test:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - digifaz-test-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: digifaz-phpmyadmin-test
+    restart: unless-stopped
+    environment:
+      PMA_HOST: ${PMA_HOST}
+      PMA_PORT: ${PMA_PORT}
+      PMA_USER: ${PMA_USER}
+      PMA_PASSWORD: ${PMA_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - '${PHPMYADMIN_EXTERNAL_PORT:-8083}:80'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - digifaz-test-network
+
+networks:
+  digifaz-test-network:
+    driver: bridge
+
+volumes:
+  db_data_test:

@@ -1,0 +1,20 @@
+# Ne pas inclure ces dossiers/fichiers dans le contexte Docker
+node_modules
+npm-debug.log
+dist
+docker/docker-compose.yml
+docker/docker-compose.prod.yml
+.DS_Store
+.git
+.gitignore
+environments/dev/
+environments/test/
+coverage
+*.local
+*.env
+*.log
+.idea
+.vscode
+*.md
+*.pdf
+repo_suggestion.txt

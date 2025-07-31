@@ -1,0 +1,163 @@
+# Arborescence schématique et explicative du projet DIGIFAZ (kerygmaapi)
+
+Ci-dessous, chaque fichier ou dossier est précédé d'une explication vulgarisée de son utilité réelle. Cette vue est adaptée à quelqu'un qui découvre Node/NestJS/Docker.
+
+```
+/ (Racine du projet)
+│
+├── .git/                # Dossier caché : gestion de l'historique du code (Git)
+├── .github/             # Configurations pour l'automatisation (CI/CD, actions GitHub)
+├── .gitignore           # Liste des fichiers/dossiers à ne pas versionner (ex: secrets, dépendances)
+├── .prettierrc          # Règles de mise en forme automatique du code
+├── README.md            # Documentation principale du projet (présentation, installation, usage)
+├── docker/              # Tout pour lancer le projet dans des conteneurs (voir détails ci-dessous)
+│   ├── Dockerfile               # Recette pour "construire" l'application dans un conteneur (image)
+│   ├── docker-compose.yml       # Orchestration : lance l'app + base de données en local (dev)
+│   └── docker-compose.prod.yml  # Orchestration : lance l'app en production (sécurisé, optimisé)
+├── docs/                # Documentation technique ou guides complémentaires
+├── environments/        # Fichiers de configuration par environnement (dev, prod, test)
+│   ├── dev/.env.template   # Exemple de variables d'environnement pour le développement
+│   ├── prod/.env.template  # Exemple de variables d'environnement pour la production
+│   └── test/.env.template  # Exemple de variables d'environnement pour les tests
+├── eslint.config.mjs    # Règles pour vérifier la qualité et cohérence du code
+├── nest-cli.json        # Configuration du CLI NestJS (outils de scaffolding)
+├── package.json         # Liste des dépendances Node.js et scripts utiles (ex: start, test)
+├── pnpm-lock.yaml       # Verrouillage des versions de dépendances (pour reproductibilité)
+├── repo_suggestion.txt  # Notes ou suggestions diverses pour le projet
+├── scripts/             # Scripts utilitaires (ex: migration, initialisation base...)
+├── src/                 # Tout le code source de l'application (voir détails ci-dessous)
+│   ├── app.controller.ts        # Point d'entrée des requêtes HTTP principales (ex: /)
+│   ├── app.module.ts            # Module racine : "branche" tous les modules métier ensemble
+│   ├── app.service.ts           # Service principal (logique métier partagée)
+│   ├── auth/                    # Authentification (connexion, sécurité, gestion JWT)
+│   ├── common/                  # Utilitaires, exceptions, helpers communs à tout le projet
+│   ├── config/                  # Centralisation de la configuration (base de données, ORM, email, etc.)
+│   │   ├── database.config.ts       # Définit les variables de connexion à la base de données (hôte, port, user...) via les variables d'environnement
+│   │   └── typeorm.config.ts        # Configuration avancée de TypeORM (ORM) : options, entités, synchronisation, chargement dynamique via ConfigService
+│   ├── database/                # Connexion à la base, migrations, seeders
+│   ├── main.ts                  # Fichier qui démarre réellement l'application
+│   └── modules/                 # Modules métier principaux (voir ci-dessous)
+│       ├── parishes/                # Gestion des paroisses
+│       │   ├── dto/                    # Schémas de validation des données reçues (ex: création paroisse)
+│       │   │   └── create-parish.dto.ts    # Définit les champs attendus pour créer une paroisse
+│       │   ├── entities/                # Définition des tables en base (TypeORM)
+│       │   │   └── parish.entity.ts         # Structure d'une paroisse en base de données
+│       │   ├── parishes.controller.ts      # Reçoit les requêtes HTTP liées aux paroisses (ex: POST/GET)
+│       │   ├── parishes.module.ts          # "Colle" tous les composants du module paroisse
+│       │   └── parishes.service.ts         # Logique métier liée aux paroisses (ex: création, recherche)
+│       ├── users/                   # Gestion des utilisateurs
+│       │   ├── dto/                     # Schémas de validation des utilisateurs
+│       │   │   └── create-user.dto.ts
+│       │   ├── entities/                 # Définition de l'utilisateur en base
+│       │   │   └── user.entity.ts
+│       │   ├── users.controller.ts       # Reçoit les requêtes HTTP utilisateurs
+│       │   ├── users.module.ts           # Assemble le module utilisateur
+│       │   └── users.service.ts          # Logique métier utilisateur
+│       ├── payments/                 # Gestion des paiements multi-gateway
+│       │   ├── dto/                      # Validation des paiements
+│       │   │   └── create-payment.dto.ts
+│       │   ├── entities/                  # Définition des tables de paiement
+│       │   │   ├── payment-gateway.entity.ts
+│       │   │   └── transaction.entity.ts
+│       │   ├── payments.controller.ts      # Reçoit les requêtes HTTP de paiement
+│       │   ├── payments.module.ts          # Assemble le module paiement
+│       │   ├── payments.service.ts         # Logique métier paiement
+│       │   └── services/                   # Services spécialisés (ex: intégration mobile money)
+│       └── ... (autres modules : masses, mass_requests, offerings, contributions, roles, reports, notifications)
+├── test/                  # Tests automatisés (unitaires et end-to-end)
+│   └── ...
+└── tsconfig.json          # Configuration principale de TypeScript (langage utilisé)
+```
+
+Légende vulgarisée des extensions/fichiers principaux :
+- `.controller.ts` : Reçoit les requêtes HTTP (ex: POST, GET) et les transmet au service approprié
+- `.service.ts` : Contient la logique métier (calculs, accès base, règles)
+- `.module.ts` : Assemble les parties du module (contrôleur, service, entités, etc.)
+- `.entity.ts` : Décrit la structure d'une table en base de données
+- `Dockerfile` : Mode d'emploi pour "construire" l'app dans un conteneur Docker
+- `docker-compose.yml` : Lance plusieurs services ensemble (app, base de données, etc.)
+- `.env` : Fichier de variables d'environnement (ex: mots de passe, ports, secrets)
+
+---
+
+# Structure du projet DIGIFAZ (kerygmaapi)
+
+## Racine du projet
+
+- **.git/** : Dossier de configuration Git pour le versionnement du code.
+- **.github/** : Workflows et configurations GitHub Actions (CI/CD).
+- **.gitignore** : Liste des fichiers/dossiers à ignorer par Git.
+- **.prettierrc** : Configuration de Prettier pour le formatage du code.
+- **DGZ_CDC_Demande_de_messe.pdf** : Cahier des charges ou documentation fonctionnelle.
+- **README.md** : Présentation, instructions et documentation du projet.
+- **db_structure.sql** : Script SQL décrivant la structure de la base de données.
+- **docker/** : Fichiers Docker pour le déploiement et l'orchestration (Dockerfile, docker-compose).
+- **docs/** : Documentation technique ou fonctionnelle supplémentaire.
+- **environments/** : Fichiers de configuration d'environnement (ex: .env, variables selon env).
+- **eslint.config.mjs** : Configuration ESLint pour la qualité du code.
+- **nest-cli.json** : Configuration du CLI NestJS.
+- **package.json** : Dépendances Node.js et scripts du projet.
+- **pnpm-lock.yaml** : Fichier de verrouillage des dépendances (pnpm).
+- **repo_suggestion.txt** : Suggestions ou notes diverses.
+- **scripts/** : Scripts utilitaires (migration, seed, etc).
+- **src/** : Code source principal de l'application.
+- **test/** : Tests unitaires et end-to-end (e2e).
+- **tsconfig.build.json** : Configuration TypeScript pour la build.
+- **tsconfig.json** : Configuration TypeScript principale.
+
+## src/
+- **app.controller.ts/.spec.ts** : Contrôleur principal et tests associés.
+- **app.module.ts** : Module racine NestJS.
+- **app.service.ts** : Service principal.
+- **auth/** : Module d'authentification (login, JWT, guards, etc).
+- **common/** : Fonctions utilitaires, exceptions, interceptors partagés.
+- **config/** : Gestion centralisée de la configuration (env, database, etc).
+- **database/** : Connexion, seeders, migrations, entités globales.
+- **main.ts** : Point d'entrée de l'application NestJS.
+- **modules/** : Modules métier principaux (voir ci-dessous).
+
+### src/modules/
+Chaque sous-dossier correspond à un module métier isolé selon l'architecture NestJS.
+
+- **contributions/** : Gestion des cotisations.
+- **mass_requests/** : Gestion des demandes de messes (forfaits, horaires, etc).
+- **masses/** : Gestion du calendrier et types de messes.
+- **notifications/** : Envoi de notifications (email, SMS, app).
+- **offerings/** : Gestion des offrandes libres et campagnes.
+- **parishes/** : Gestion des paroisses (entités, CRUD, etc).
+- **payments/** : Gestion des paiements (multi-gateway, transactions).
+- **reports/** : Génération de rapports et statistiques.
+- **roles/** : Gestion des rôles et permissions utilisateurs.
+- **users/** : Gestion des utilisateurs.
+
+#### Exemple de structure d'un module (ex: parishes/)
+- **dto/** : Data Transfer Objects (schémas de validation des données entrantes).
+    - `create-parish.dto.ts` : Schéma pour la création d'une paroisse.
+- **entities/** : Définition des entités TypeORM.
+    - `parish.entity.ts` : Entité Paroisse.
+- **parishes.controller.ts** : Contrôleur HTTP pour les routes paroisses.
+- **parishes.module.ts** : Module NestJS pour l'encapsulation du domaine paroisse.
+- **parishes.service.ts** : Service métier pour la logique paroisse.
+
+#### Exemple de structure d'un module (ex: payments/)
+- **dto/** : Schémas de validation des paiements.
+    - `create-payment.dto.ts`
+- **entities/** : Entités TypeORM pour les paiements.
+    - `payment-gateway.entity.ts`, `transaction.entity.ts`
+- **payments.controller.ts** : Contrôleur des paiements.
+- **payments.module.ts** : Module de paiement.
+- **payments.service.ts** : Service métier des paiements.
+- **services/** : Services spécifiques (ex: intégration mobile money).
+
+## docker/
+- **Dockerfile** : Image Docker de l'app.
+- **docker-compose.yml** : Orchestration multi-conteneurs (dev).
+- **docker-compose.prod.yml** : Orchestration pour la prod.
+
+## test/
+- Tests unitaires et e2e pour garantir la qualité du projet.
+
+---
+
+**Résumé :**
+Ce projet suit une architecture modulaire NestJS, chaque module représentant un domaine métier (utilisateurs, paiements, paroisses, etc). Les dossiers `dto` et `entities` structurent la validation et la persistance des données. Les fichiers Docker et de configuration permettent le déploiement automatisé. La documentation et les scripts facilitent la prise en main et la maintenance.
