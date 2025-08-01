@@ -10,8 +10,8 @@ import { UserRole } from './user-role.entity';
 
 @Entity('user_has_roles')
 export class UserHasRole {
-  @PrimaryColumn()
-  user_id: number;
+  @PrimaryColumn('varchar')
+  user_id: string;
 
   @PrimaryColumn()
   role_id: number;

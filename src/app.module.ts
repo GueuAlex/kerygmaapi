@@ -12,6 +12,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 
 // Import des modules métier
 import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
 // import { ParishesModule } from './modules/parishes/parishes.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
 
     // Modules métier (décommentez selon vos besoins)
     UsersModule,
+    RolesModule,
     // ParishesModule,
     AuthModule,
   ],
