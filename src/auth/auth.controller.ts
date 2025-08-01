@@ -16,6 +16,11 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+} from './dto/forgot-password.dto';
 import { Public } from './decorators/public.decorator';
 
 @ApiTags('Authentification')
@@ -252,5 +257,166 @@ Retourne les informations du profil de l'utilisateur actuellement connecté.
   })
   getProfile(@Request() req: { user: any }) {
     return req.user;
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Demande de réinitialisation de mot de passe',
+    description: `
+🔓 **Endpoint public** - Accessible sans authentification
+
+Initie le processus de récupération de mot de passe en envoyant un code OTP.
+
+**Processus de sécurité :**
+1. Vérification de l'existence de l'utilisateur
+2. Invalidation des anciens codes non utilisés
+3. Génération d'un code OTP à 6 chiffres (validité 10 minutes)
+4. Envoi par SMS (priorité) ou email selon disponibilité
+
+**Politique de sécurité :**
+- Même réponse que l'email existe ou non (protection contre l'énumération)
+- Un seul OTP actif par utilisateur à la fois
+- Expiration automatique après 10 minutes
+
+**Méthodes d'envoi (par priorité) :**
+1. 📱 SMS si numéro de téléphone disponible
+2. 📧 Email si pas de téléphone
+
+**Exemple d'utilisation :**
+\`\`\`json
+{
+  "email": "user@digifaz.com"
+}
+\`\`\`
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Demande traitée (que l'email existe ou non)",
+    example: {
+      message: 'Si cet email existe, un code de vérification a été envoyé',
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email invalide (validation échouée)',
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Vérification du code OTP',
+    description: `
+🔓 **Endpoint public** - Accessible sans authentification
+
+Valide le code OTP reçu et retourne un token de réinitialisation temporaire.
+
+**Processus de validation :**
+1. Vérification du code OTP (6 chiffres)
+2. Contrôle de l'expiration (10 minutes max)
+3. Vérification du nombre de tentatives (5 max)
+4. Génération d'un token de réinitialisation (validité 5 minutes)
+
+**Sécurités implémentées :**
+- Maximum 5 tentatives par OTP
+- Token de réinitialisation temporaire (5 minutes)
+- Invalidation automatique après usage
+- Protection contre le brute force
+
+**Étape suivante :**
+Utiliser le \`resetToken\` reçu avec \`POST /auth/reset-password\`
+
+**Exemple d'utilisation :**
+\`\`\`json
+{
+  "email": "user@digifaz.com",
+  "otp": "123456"
+}
+\`\`\`
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP validé avec succès, token de réinitialisation fourni',
+    example: {
+      resetToken: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+      message:
+        'Code vérifié. Vous pouvez maintenant réinitialiser votre mot de passe',
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Code OTP invalide, expiré ou trop de tentatives',
+  })
+  async verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+  ): Promise<{ resetToken: string; message: string }> {
+    return this.authService.verifyOtp(verifyOtpDto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Réinitialisation du mot de passe',
+    description: `
+🔓 **Endpoint public** - Accessible sans authentification
+
+Finalise la réinitialisation du mot de passe avec le token temporaire.
+
+**Processus de réinitialisation :**
+1. Validation du token de réinitialisation (5 minutes max)
+2. Vérification de la correspondance des mots de passe
+3. Application des règles de complexité
+4. Hachage sécurisé et mise à jour
+5. Invalidation du token utilisé
+
+**Règles de mot de passe :**
+- Minimum 8 caractères, maximum 50
+- Au moins 1 minuscule, 1 majuscule, 1 chiffre
+- Au moins 1 caractère spécial (@$!%*?&)
+
+**Sécurités :**
+- Token à usage unique (invalidé après utilisation)
+- Expiration rapide du token (5 minutes)
+- Hachage bcrypt avec salt rounds élevé
+
+**Exemple d'utilisation :**
+\`\`\`json
+{
+  "resetToken": "a1b2c3d4e5f6...",
+  "newPassword": "NouveauMotDePasse123*",
+  "confirmPassword": "NouveauMotDePasse123*"
+}
+\`\`\`
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Mot de passe réinitialisé avec succès',
+    example: {
+      message: 'Mot de passe réinitialisé avec succès',
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token invalide/expiré ou mots de passe non conformes',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Utilisateur non trouvé',
+  })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }

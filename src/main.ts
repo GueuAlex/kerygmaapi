@@ -6,6 +6,10 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Configuration du prefixe API global
+  const apiPrefix = process.env.API_PREFIX || 'api/v1';
+  app.setGlobalPrefix(apiPrefix);
+
   // Configuration de la validation globale
   app.useGlobalPipes(
     new ValidationPipe({
@@ -63,12 +67,12 @@ Pour utiliser les endpoints protégés, vous devez :
       },
       'JWT-auth',
     )
-    .addServer('http://localhost:3000', 'Développement local')
-    .addServer('http://194.163.136.227:3001', 'Production')
+    .addServer(`http://localhost:3000/${apiPrefix}`, 'Développement local')
+    .addServer(`http://194.163.136.227:3001/${apiPrefix}`, 'Production')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document, {
+  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
     customSiteTitle: 'Kerygma API Documentation',
     customCssUrl:
       'https://cdn.jsdelivr.net/npm/swagger-ui-themes@3.0.1/themes/3.x/theme-material.css',
@@ -85,8 +89,12 @@ Pour utiliser les endpoints protégés, vous devez :
   await app.listen(port);
 
   console.log(`🚀 Kerygma API démarrée sur http://localhost:${port}`);
-  console.log(`📚 Documentation Swagger : http://localhost:${port}/api-docs`);
-  console.log(`🔗 JSON Schema : http://localhost:${port}/api-docs-json`);
+  console.log(
+    `📚 Documentation Swagger : http://localhost:${port}/${apiPrefix}/docs`,
+  );
+  console.log(
+    `🔗 JSON Schema : http://localhost:${port}/${apiPrefix}/docs-json`,
+  );
 }
 
 void bootstrap();

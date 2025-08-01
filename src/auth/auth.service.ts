@@ -2,25 +2,38 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import {
   User,
   UserRole,
   UserStatus,
 } from '../modules/users/entities/user.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+} from './dto/forgot-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { NotificationService } from './services/notification.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(PasswordReset)
+    private passwordResetRepository: Repository<PasswordReset>,
     private jwtService: JwtService,
+    private notificationService: NotificationService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -137,6 +150,166 @@ export class AuthService {
       email: user.email,
       role: user.role,
       fullName: user.fullName,
+    };
+  }
+
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    const { email } = forgotPasswordDto;
+
+    // Vérifier si l'utilisateur existe
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'phone', 'fullName'],
+    });
+
+    if (!user) {
+      // Ne pas révéler si l'email existe ou non pour la sécurité
+      return {
+        message: 'Si cet email existe, un code de vérification a été envoyé',
+      };
+    }
+
+    // Invalider les anciens OTP non utilisés
+    await this.passwordResetRepository.update(
+      { email, isUsed: false },
+      { isUsed: true },
+    );
+
+    // Générer un OTP à 6 chiffres
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Sauvegarder l'OTP
+    const passwordReset = this.passwordResetRepository.create({
+      email,
+      otp,
+      otpExpiresAt,
+      attempts: 0,
+    });
+
+    await this.passwordResetRepository.save(passwordReset);
+
+    // Envoyer l'OTP (priorité au téléphone si disponible)
+    if (user.phone) {
+      await this.notificationService.sendOtpBySms(user.phone, otp);
+    } else {
+      await this.notificationService.sendOtpByEmail(email, otp);
+    }
+
+    return {
+      message: 'Si cet email existe, un code de vérification a été envoyé',
+    };
+  }
+
+  async verifyOtp(
+    verifyOtpDto: VerifyOtpDto,
+  ): Promise<{ resetToken: string; message: string }> {
+    const { email, otp } = verifyOtpDto;
+
+    // Chercher l'OTP valide
+    const passwordReset = await this.passwordResetRepository.findOne({
+      where: {
+        email,
+        otp,
+        isUsed: false,
+        otpExpiresAt: MoreThan(new Date()),
+      },
+    });
+
+    if (!passwordReset) {
+      // Incrémenter les tentatives si l'OTP existe mais est incorrect
+      await this.passwordResetRepository.update(
+        { email, isUsed: false },
+        { attempts: () => 'attempts + 1' },
+      );
+
+      throw new BadRequestException('Code OTP invalide ou expiré');
+    }
+
+    // Vérifier le nombre de tentatives (max 5)
+    if (passwordReset.attempts >= 5) {
+      await this.passwordResetRepository.update(
+        { id: passwordReset.id },
+        { isUsed: true },
+      );
+      throw new BadRequestException(
+        'Trop de tentatives. Demandez un nouveau code',
+      );
+    }
+
+    // Générer un token de réinitialisation temporaire (5 minutes)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Mettre à jour avec le token
+    await this.passwordResetRepository.update(
+      { id: passwordReset.id },
+      { resetToken, tokenExpiresAt },
+    );
+
+    return {
+      resetToken,
+      message:
+        'Code vérifié. Vous pouvez maintenant réinitialiser votre mot de passe',
+    };
+  }
+
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    const { resetToken, newPassword, confirmPassword } = resetPasswordDto;
+
+    // Vérifier que les mots de passe correspondent
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe et sa confirmation ne correspondent pas',
+      );
+    }
+
+    // Chercher le token valide
+    const passwordReset = await this.passwordResetRepository.findOne({
+      where: {
+        resetToken,
+        isUsed: false,
+        tokenExpiresAt: MoreThan(new Date()),
+      },
+    });
+
+    if (!passwordReset) {
+      throw new BadRequestException(
+        'Token de réinitialisation invalide ou expiré',
+      );
+    }
+
+    // Trouver l'utilisateur
+    const user = await this.userRepository.findOne({
+      where: { email: passwordReset.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Hasher le nouveau mot de passe
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Mettre à jour le mot de passe
+    await this.userRepository.update(
+      { id: user.id },
+      { password: hashedPassword },
+    );
+
+    // Marquer le token comme utilisé
+    await this.passwordResetRepository.update(
+      { id: passwordReset.id },
+      { isUsed: true },
+    );
+
+    return {
+      message: 'Mot de passe réinitialisé avec succès',
     };
   }
 }
