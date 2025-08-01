@@ -24,6 +24,7 @@ import {
 } from './dto/forgot-password.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { NotificationService } from './services/notification.service';
+import { RolesService } from '../modules/roles/roles.service';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +35,7 @@ export class AuthService {
     private passwordResetRepository: Repository<PasswordReset>,
     private jwtService: JwtService,
     private notificationService: NotificationService,
+    private rolesService: RolesService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -63,6 +65,16 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
+
+    // Assigner automatiquement le rôle avancé correspondant
+    try {
+      await this.assignDefaultAdvancedRole(savedUser.id, role || 'user');
+    } catch (error) {
+      console.warn(
+        "Erreur lors de l'assignation du rôle avancé:",
+        error instanceof Error ? error.message : 'Erreur inconnue',
+      );
+    }
 
     // Générer le token JWT
     const payload: JwtPayload = {
@@ -311,5 +323,49 @@ export class AuthService {
     return {
       message: 'Mot de passe réinitialisé avec succès',
     };
+  }
+
+  /**
+   * Assigne automatiquement un rôle avancé basé sur le rôle enum
+   */
+  private async assignDefaultAdvancedRole(
+    userId: string,
+    enumRole: string,
+  ): Promise<void> {
+    // Correspondance entre rôles enum et rôles avancés
+    const roleMapping = {
+      admin: 'super_admin',
+      priest: 'parish_priest',
+      parish_admin: 'secretary',
+      user: 'basic_user',
+    };
+
+    const advancedRoleName = roleMapping[enumRole] || 'basic_user';
+
+    try {
+      // Chercher le rôle avancé par nom
+      const roles = await this.rolesService.findAllRoles();
+      const targetRole = roles.find((role) => role.name === advancedRoleName);
+
+      if (targetRole) {
+        // Assigner le rôle avancé
+        await this.rolesService.assignRoleToUser(userId, targetRole.id);
+      }
+    } catch (error) {
+      // Si les rôles avancés n'existent pas encore, les créer d'abord
+      const isNotFoundError =
+        (error as any)?.status === 404 ||
+        (error instanceof Error && error.message.includes('non trouvé'));
+
+      if (isNotFoundError) {
+        await this.rolesService.seedDefaultRoles();
+        // Retry l'assignation
+        const roles = await this.rolesService.findAllRoles();
+        const targetRole = roles.find((role) => role.name === advancedRoleName);
+        if (targetRole) {
+          await this.rolesService.assignRoleToUser(userId, targetRole.id);
+        }
+      }
+    }
   }
 }

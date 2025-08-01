@@ -9,11 +9,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { NotificationService } from './services/notification.service';
 import { User } from '../modules/users/entities/user.entity';
 import { PasswordReset } from './entities/password-reset.entity';
+import { RolesModule } from '../modules/roles/roles.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, PasswordReset]),
     PassportModule,
+    RolesModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
