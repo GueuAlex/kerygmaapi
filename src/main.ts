@@ -26,6 +26,8 @@ async function bootstrap() {
   });
 
   // Configuration Swagger
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const config = new DocumentBuilder()
     .setTitle('KERYGMA API REST FULL')
     .setDescription(
@@ -66,12 +68,28 @@ Pour utiliser les endpoints protégés, vous devez :
         description: 'Token JWT obtenu lors de la connexion',
       },
       'JWT-auth',
-    )
-    .addServer(`http://localhost:3000/${apiPrefix}`, 'Développement local')
-    .addServer(`http://194.163.136.227:3001/${apiPrefix}`, 'Production')
-    .build();
+    );
 
-  const document = SwaggerModule.createDocument(app, config);
+  // Ajouter les serveurs selon l'environnement (serveur par défaut en premier)
+  if (isProduction) {
+    config
+      .addServer(
+        'http://194.163.136.227:3001',
+        'Production (Serveur principal)',
+      )
+      .addServer('http://localhost:3000', 'Développement local');
+  } else {
+    config
+      .addServer(
+        'http://localhost:3000',
+        'Développement local (Serveur principal)',
+      )
+      .addServer('http://194.163.136.227:3001', 'Production');
+  }
+
+  const swaggerConfig = config.build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
     customSiteTitle: 'Kerygma API Documentation',
     customCssUrl:
@@ -82,19 +100,20 @@ Pour utiliser les endpoints protégés, vous devez :
       filter: true,
       showExtensions: true,
       showCommonExtensions: true,
+      // Forcer l'utilisation du premier serveur de la liste
+      defaultServerIndex: 0,
     },
   });
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
+  const baseUrl = isProduction
+    ? `http://194.163.136.227:${port}`
+    : `http://localhost:${port}`;
 
-  console.log(`🚀 Kerygma API démarrée sur http://localhost:${port}`);
-  console.log(
-    `📚 Documentation Swagger : http://localhost:${port}/${apiPrefix}/docs`,
-  );
-  console.log(
-    `🔗 JSON Schema : http://localhost:${port}/${apiPrefix}/docs-json`,
-  );
+  console.log(`🚀 Kerygma API démarrée sur ${baseUrl}`);
+  console.log(`📚 Documentation Swagger : ${baseUrl}/${apiPrefix}/docs`);
+  console.log(`🔗 JSON Schema : ${baseUrl}/${apiPrefix}/docs-json`);
 }
 
 void bootstrap();
