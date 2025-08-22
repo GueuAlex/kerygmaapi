@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { NotificationService } from './services/notification.service';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { User } from '../modules/users/entities/user.entity';
 import { PasswordReset } from './entities/password-reset.entity';
 import { RolesModule } from '../modules/roles/roles.module';
@@ -28,7 +29,7 @@ import { RolesModule } from '../modules/roles/roles.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, NotificationService],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, NotificationService, PermissionsGuard],
+  exports: [AuthService, PermissionsGuard],
 })
 export class AuthModule {}

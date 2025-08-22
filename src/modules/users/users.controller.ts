@@ -21,20 +21,24 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto, UsersListResponseDto } from './dto/user-response.dto';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 
 @ApiTags('Gestion des utilisateurs')
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles('admin', 'priest')
+  @Permissions.Users.Read()
   @ApiOperation({
     summary: 'Liste des utilisateurs avec filtres et pagination',
     description: `
-🔒 **Accès restreint** : Admin et Priest uniquement
+🔒 **Permission requise** : Lecture des utilisateurs
 
 Récupère la liste des utilisateurs avec possibilité de :
 - **Rechercher** par nom ou email
@@ -88,11 +92,11 @@ Retourne les informations complètes du profil de l'utilisateur actuellement con
   }
 
   @Get('stats')
-  @Roles('admin')
+  @Permissions.Users.Read()
   @ApiOperation({
     summary: 'Statistiques des utilisateurs',
     description: `
-🔒 **Accès restreint** : Admin uniquement
+🔒 **Permission requise** : Lecture des utilisateurs
 
 Retourne des statistiques détaillées sur les utilisateurs :
 - Nombre total d'utilisateurs
@@ -134,11 +138,11 @@ Retourne des statistiques détaillées sur les utilisateurs :
   }
 
   @Get(':id')
-  @Roles('admin', 'priest')
+  @Permissions.Users.Read()
   @ApiOperation({
     summary: "Détails d'un utilisateur spécifique",
     description: `
-🔒 **Accès restreint** : Admin et Priest uniquement
+🔒 **Permission requise** : Lecture des utilisateurs
 
 Récupère les informations détaillées d'un utilisateur par son ID.
 
@@ -248,11 +252,11 @@ Permet à un utilisateur de modifier son propre mot de passe de manière sécuri
   }
 
   @Put(':id')
-  @Roles('admin')
+  @Permissions.Users.Write()
   @ApiOperation({
-    summary: 'Modifier un utilisateur (Admin uniquement)',
+    summary: 'Modifier un utilisateur',
     description: `
-🔒 **Accès restreint** : Admin uniquement
+🔒 **Permission requise** : Lecture des utilisateurs
 
 Permet à un administrateur de modifier tous les aspects d'un utilisateur :
 - Informations personnelles (nom, email, téléphone)
@@ -290,12 +294,12 @@ Permet à un administrateur de modifier tous les aspects d'un utilisateur :
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Permissions.Users.Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Supprimer un utilisateur (Admin uniquement)',
+    summary: 'Supprimer un utilisateur',
     description: `
-🔒 **Accès restreint** : Admin uniquement
+🔒 **Permission requise** : Lecture des utilisateurs
 
 ⚠️ **Action irréversible** - Supprime définitivement un utilisateur et toutes ses données.
 

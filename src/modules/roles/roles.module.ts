@@ -12,4 +12,11 @@ import { User } from '../users/entities/user.entity';
   providers: [RolesService],
   exports: [RolesService],
 })
-export class RolesModule {}
+export class RolesModule {
+  static forRoot() {
+    return {
+      module: RolesModule,
+      global: true,
+    };
+  }
+}

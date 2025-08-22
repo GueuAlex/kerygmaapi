@@ -21,16 +21,20 @@ import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleResponseDto, UserRolesResponseDto } from './dto/role-response.dto';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 
 @ApiTags('Gestion des Rôles et Permissions')
 @ApiBearerAuth('JWT-auth')
 @Controller('roles')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post('seed')
-  @Roles('admin')
+  @Permissions.Roles.Write()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Initialiser les rôles par défaut',
@@ -57,7 +61,7 @@ Crée les rôles par défaut du système avec leurs permissions :
   }
 
   @Get()
-  @Roles('admin', 'priest')
+  @Permissions.Roles.Read()
   @ApiOperation({
     summary: 'Liste de tous les rôles',
     description: `
@@ -81,7 +85,7 @@ Retourne la liste complète des rôles disponibles avec leurs permissions.
   }
 
   @Get(':id')
-  @Roles('admin', 'priest')
+  @Permissions.Roles.Read()
   @ApiParam({
     name: 'id',
     description: 'ID du rôle',
@@ -109,7 +113,7 @@ Retourne les détails complets d'un rôle avec toutes ses permissions.
   }
 
   @Post()
-  @Roles('admin')
+  @Permissions.Roles.Write()
   @ApiOperation({
     summary: 'Créer un nouveau rôle',
     description: `
@@ -144,7 +148,7 @@ Crée un nouveau rôle personnalisé avec ses permissions spécifiques.
   }
 
   @Put(':id')
-  @Roles('admin')
+  @Permissions.Roles.Write()
   @ApiParam({
     name: 'id',
     description: 'ID du rôle à modifier',
@@ -181,7 +185,7 @@ Modifie les propriétés d'un rôle existant (nom, description, permissions).
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Permissions.Roles.Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiParam({
     name: 'id',
@@ -211,7 +215,7 @@ Supprime définitivement un rôle et toutes ses assignations.
   }
 
   @Get(':id/permissions')
-  @Roles('admin', 'priest')
+  @Permissions.Roles.Read()
   @ApiParam({
     name: 'id',
     description: 'ID du rôle',
@@ -249,7 +253,7 @@ Retourne uniquement les permissions d'un rôle spécifique dans un format détai
   }
 
   @Post('users/:userId/roles/:roleId')
-  @Roles('admin')
+  @Permissions.Users.Write()
   @HttpCode(HttpStatus.CREATED)
   @ApiParam({
     name: 'userId',
@@ -295,7 +299,7 @@ Assigne un rôle spécifique à un utilisateur.
   }
 
   @Delete('users/:userId/roles/:roleId')
-  @Roles('admin')
+  @Permissions.Users.Write()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiParam({
     name: 'userId',
@@ -333,7 +337,7 @@ Retire un rôle spécifique d'un utilisateur.
   }
 
   @Get('users/:userId/roles')
-  @Roles('admin', 'priest')
+  @Permissions.Users.Read()
   @ApiParam({
     name: 'userId',
     description: 'ID de l\'utilisateur',
@@ -357,7 +361,7 @@ Retourne tous les rôles assignés à un utilisateur spécifique.
   }
 
   @Get('users/:userId/permissions')
-  @Roles('admin', 'priest')
+  @Permissions.Users.Read()
   @ApiParam({
     name: 'userId',
     description: 'ID de l\'utilisateur',

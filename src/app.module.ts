@@ -14,6 +14,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { ParishesModule } from './modules/parishes/parishes.module';
+import { MassesModule } from './modules/masses/masses.module';
+import { MassRequestsModule } from './modules/mass_requests/mass-requests.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -36,6 +38,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
     RolesModule,
     ParishesModule,
+    MassesModule,
+    MassRequestsModule,
     AuthModule,
   ],
   controllers: [AppController],

@@ -23,8 +23,8 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
 import { ParishesService } from './parishes.service';
 import {
   CreateParishDto,
@@ -36,16 +36,16 @@ import {
 
 @ApiTags('Gestion des Paroisses')
 @Controller('parishes')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class ParishesController {
   constructor(private readonly parishesService: ParishesService) {}
 
   @Post()
-  @Roles('admin', 'priest')
+  @Permissions.Parishes.Write()
   @ApiOperation({
     summary: 'Creer une nouvelle paroisse',
-    description: 'Permet aux administrateurs et pretres de creer une nouvelle paroisse avec toutes ses informations',
+    description: 'Permet aux utilisateurs avec permission d\'ecriture sur les paroisses de creer une nouvelle paroisse',
   })
   @ApiBody({ type: CreateParishDto })
   @ApiResponse({
@@ -58,7 +58,7 @@ export class ParishesController {
     description: 'Permissions insuffisantes',
     schema: {
       example: {
-        message: 'Acces refuse. Roles requis: admin, priest. Votre role actuel: user',
+        message: 'Permission refusee. Ressource: parishes, Action: write',
         error: 'Forbidden',
         statusCode: 403,
       },
@@ -93,10 +93,10 @@ export class ParishesController {
   }
 
   @Get()
-  @Roles('admin', 'priest', 'parish_admin')
+  @Permissions.Parishes.Read()
   @ApiOperation({
     summary: 'Lister toutes les paroisses',
-    description: 'Recupere la liste paginee de toutes les paroisses avec possibilite de recherche et tri',
+    description: 'Recupere la liste paginee de toutes les paroisses (permission de lecture requise)',
   })
   @ApiQuery({ name: 'page', required: false, description: 'Numero de page', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Nombre d\'elements par page', example: 10 })
@@ -115,7 +115,7 @@ export class ParishesController {
   }
 
   @Get('search')
-  @Roles('admin', 'priest', 'parish_admin', 'user')
+  @Permissions.Parishes.Read()
   @ApiOperation({
     summary: 'Rechercher des paroisses',
     description: 'Recherche rapide de paroisses par nom, adresse ou email',
@@ -142,7 +142,7 @@ export class ParishesController {
   }
 
   @Get('stats')
-  @Roles('admin', 'priest')
+  @Permissions.Parishes.Read()
   @ApiOperation({
     summary: 'Statistiques des paroisses',
     description: 'Recupere les statistiques globales des paroisses (total, avec infos bancaires, etc.)',
@@ -171,7 +171,7 @@ export class ParishesController {
   }
 
   @Get(':id')
-  @Roles('admin', 'priest', 'parish_admin', 'user')
+  @Permissions.Parishes.Read()
   @ApiOperation({
     summary: 'Recuperer une paroisse par son ID',
     description: 'Recupere les details complets d\'une paroisse specifique',
@@ -200,7 +200,7 @@ export class ParishesController {
   }
 
   @Patch(':id')
-  @Roles('admin', 'priest')
+  @Permissions.Parishes.Write()
   @ApiOperation({
     summary: 'Mettre a jour une paroisse',
     description: 'Met a jour partiellement les informations d\'une paroisse existante',
@@ -242,7 +242,7 @@ export class ParishesController {
   }
 
   @Put(':id/bank-info')
-  @Roles('admin', 'priest')
+  @Permissions.Parishes.Write()
   @ApiOperation({
     summary: 'Mettre a jour les informations bancaires',
     description: 'Met a jour specifiquement les informations bancaires d\'une paroisse',
@@ -279,7 +279,7 @@ export class ParishesController {
   }
 
   @Put(':id/mobile-money')
-  @Roles('admin', 'priest')
+  @Permissions.Parishes.Write()
   @ApiOperation({
     summary: 'Mettre a jour les numeros mobile money',
     description: 'Met a jour specifiquement les numeros de mobile money d\'une paroisse',
@@ -314,10 +314,10 @@ export class ParishesController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Permissions.Parishes.Delete()
   @ApiOperation({
     summary: 'Supprimer une paroisse',
-    description: 'Supprime definitivement une paroisse (reserve aux administrateurs)',
+    description: 'Supprime definitivement une paroisse (permission de suppression requise)',
   })
   @ApiParam({ name: 'id', description: 'Identifiant unique de la paroisse', example: '550e8400-e29b-41d4-a716-446655440000' })
   @ApiResponse({
