@@ -1,54 +1,39 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  Index,
-} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { Parish } from '../entities/parish.entity';
 
-@Entity('parishes')
-@Index('idx_parish_name', ['name'])
-export class Parish {
+export class ParishResponseDto {
   @ApiProperty({
     description: 'Identifiant unique de la paroisse',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @ApiProperty({
     description: 'Nom de la paroisse',
     example: 'Paroisse Saint-Pierre de Yamoussoukro',
-    maxLength: 255,
   })
-  @Column({ unique: true, length: 255 })
   name: string;
 
   @ApiProperty({
     description: 'Adresse complete de la paroisse',
     example: 'BP 1234, Quartier Administratif, Yamoussoukro, Cote d\'Ivoire',
-    required: false,
+    nullable: true,
   })
-  @Column({ type: 'text', nullable: true })
-  address: string;
+  address: string | null;
 
   @ApiProperty({
     description: 'Email de contact de la paroisse',
     example: 'contact@paroisse-saint-pierre.ci',
-    required: false,
+    nullable: true,
   })
-  @Column({ length: 150, nullable: true })
-  contact_email: string;
+  contact_email: string | null;
 
   @ApiProperty({
     description: 'Numero de telephone principal',
     example: '+225 07 12 34 56 78',
-    required: false,
+    nullable: true,
   })
-  @Column({ length: 20, nullable: true })
-  contact_phone: string;
+  contact_phone: string | null;
 
   @ApiProperty({
     description: 'Informations bancaires de la paroisse',
@@ -59,17 +44,9 @@ export class Parish {
       bic: 'BACICIAB',
       account_holder: 'Paroisse Saint-Pierre',
     },
-    required: false,
+    nullable: true,
   })
-  @Column({ type: 'json', nullable: true })
-  bank_account_info: {
-    bank_name?: string;
-    account_number?: string;
-    iban?: string;
-    bic?: string;
-    account_holder?: string;
-    [key: string]: any;
-  };
+  bank_account_info: object | null;
 
   @ApiProperty({
     description: 'Numeros de mobile money de la paroisse',
@@ -78,28 +55,61 @@ export class Parish {
       mtn_money: '05 87 65 43 21',
       wave: '01 23 45 67 89',
     },
-    required: false,
+    nullable: true,
   })
-  @Column({ type: 'json', nullable: true })
-  mobile_money_numbers: {
-    orange_money?: string;
-    mtn_money?: string;
-    wave?: string;
-    moov_money?: string;
-    [key: string]: any;
-  };
+  mobile_money_numbers: object | null;
 
   @ApiProperty({
     description: 'Date de creation de la paroisse',
     example: '2025-01-15T10:30:00Z',
   })
-  @CreateDateColumn()
   created_at: Date;
 
   @ApiProperty({
     description: 'Date de derniere mise a jour',
     example: '2025-01-20T14:45:00Z',
   })
-  @UpdateDateColumn()
   updated_at: Date;
+
+  static fromEntity(parish: Parish): ParishResponseDto {
+    return {
+      id: parish.id,
+      name: parish.name,
+      address: parish.address,
+      contact_email: parish.contact_email,
+      contact_phone: parish.contact_phone,
+      bank_account_info: parish.bank_account_info,
+      mobile_money_numbers: parish.mobile_money_numbers,
+      created_at: parish.created_at,
+      updated_at: parish.updated_at,
+    };
+  }
+}
+
+export class PaginatedParishesResponseDto {
+  @ApiProperty({
+    description: 'Liste des paroisses',
+    type: [ParishResponseDto],
+  })
+  data: ParishResponseDto[];
+
+  @ApiProperty({
+    description: 'Informations de pagination',
+    example: {
+      total: 25,
+      page: 1,
+      limit: 10,
+      totalPages: 3,
+      hasNext: true,
+      hasPrev: false,
+    },
+  })
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
