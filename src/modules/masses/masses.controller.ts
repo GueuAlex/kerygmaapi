@@ -252,6 +252,9 @@ Modifie les informations d'un type de célébration existant.
 
 Programme une nouvelle messe dans le calendrier avec validation des conflits d'horaire.
 
+**Renseignement automatique :**
+- Le champ \`created_by_user_id\` est automatiquement renseigné depuis le token JWT de l'utilisateur connecté
+
 **Validations automatiques :**
 - Vérification que la date n'est pas dans le passé
 - Contrôle des conflits d'horaire au même lieu

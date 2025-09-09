@@ -6,5 +6,5 @@ export class CreateMassDto {
   readonly location?: string;
   readonly status?: 'active' | 'cancelled' | 'disabled_requests';
   readonly notes?: string;
-  readonly created_by_user_id?: number;
+  readonly created_by_user_id?: string;
 }

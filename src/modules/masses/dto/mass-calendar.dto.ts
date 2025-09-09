@@ -286,10 +286,10 @@ export class MassCalendarResponseDto {
 
   @ApiProperty({
     description: 'ID de l\'utilisateur créateur',
-    example: 123,
+    example: 'de037ba6-d617-4892-b57f-d74191bc4550',
     nullable: true,
   })
-  created_by_user_id: number | null;
+  created_by_user_id: string | null;
 
   @ApiProperty({
     description: 'Date de création',

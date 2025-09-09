@@ -76,3 +76,7 @@ scripts/deploy-manual.sh
 backup/
 *.backup
 *.bak
+
+#ignorer les fichiers .sql
+*.sql
+

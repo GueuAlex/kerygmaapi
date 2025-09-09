@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { CelebrationType } from './entities/celebration-type.entity';
 import { MassCalendar } from './entities/mass-calendar.entity';
 import {
@@ -150,7 +150,7 @@ export class MassesService {
       location: createDto.location,
       status: createDto.status || 'active',
       notes: createDto.notes,
-      created_by_user_id: createdByUserId ? parseInt(createdByUserId) : undefined,
+      created_by_user_id: createdByUserId || undefined,
     });
 
     massCalendar.celebration_type = celebrationType;
@@ -294,7 +294,7 @@ export class MassesService {
 
     const masses = await this.massCalendarRepository.find({
       where: {
-        mass_date: { $gte: today } as any,
+        mass_date: MoreThanOrEqual(today),
         status: MassStatus.ACTIVE,
       },
       relations: ['celebration_type'],

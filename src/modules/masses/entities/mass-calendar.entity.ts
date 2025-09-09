@@ -40,8 +40,8 @@ export class MassCalendar {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ nullable: true })
-  created_by_user_id: number;
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  created_by_user_id: string;
 
   @CreateDateColumn()
   created_at: Date;
