@@ -18,6 +18,7 @@ import { MassesModule } from './modules/masses/masses.module';
 import { MassRequestsModule } from './modules/mass_requests/mass-requests.module';
 import { OfferingsModule } from './modules/offerings/offerings.module';
 import { ContributionsModule } from './modules/contributions/contributions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { AuthModule } from './auth/auth.module';
     MassRequestsModule,
     OfferingsModule,
     ContributionsModule,
+    PaymentsModule,
     AuthModule,
   ],
   controllers: [AppController],

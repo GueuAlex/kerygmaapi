@@ -73,6 +73,9 @@ Le système utilise des permissions **par ressource et par action** au lieu des 
 - **masses** : Calendrier et demandes de messes
 - **roles** : Gestion des rôles et permissions
 - **offerings** : Gestion des offrandes et campagnes
+- **contributions** : Gestion des cotisations et cartes
+- **payments** : Gestion des paiements et transactions
+- **reports** : Génération de rapports et statistiques
 - ***** : Toutes les ressources (super-admin)
 
 ---
@@ -143,15 +146,21 @@ En cas d'accès refusé :
 
 ## 🏗️ **Modules disponibles**
 
-✅ **Auth** : Inscription, connexion, récupération mot de passe  
-✅ **Users** : Gestion complète des utilisateurs  
-✅ **Roles** : Système de permissions granulaires  
-✅ **Parishes** : Gestion des paroisses  
-✅ **Masses** : Calendrier liturgique et types de célébrations  
-✅ **Mass-Requests** : Demandes de messes et intentions  
-✅ **Offerings** : Gestion des offrandes, types et campagnes avec dons anonymes
+### ✅ **Modules fonctionnels** (8/9)
 
-🔄 **À venir** : Contributions, Finances, Rapports
+✅ **Auth** : Inscription, connexion, récupération mot de passe  
+✅ **Users** : Gestion complète des utilisateurs et profils  
+✅ **Roles** : Système de permissions granulaires avancé  
+✅ **Parishes** : Gestion des paroisses avec géolocalisation  
+✅ **Masses** : Calendrier liturgique et types de célébrations  
+✅ **Mass-Requests** : Demandes de messes et intentions avec paiements  
+✅ **Offerings** : Gestion des offrandes, types et campagnes avec dons anonymes  
+✅ **Contributions** : Cartes de cotisation et campagnes avec QR codes  
+✅ **Payments** : Système centralisé de transactions multi-passerelles
+
+### 🔴 **À implémenter** (1/9)
+
+🔄 **Reports** : Génération de rapports financiers et statistiques
 
 ---
 
@@ -164,7 +173,7 @@ Les anciens rôles (\`admin\`, \`priest\`, \`user\`) sont automatiquement migré
 **💡 Conseil** : Utilisez les endpoints \`/roles\` pour explorer et tester les permissions avant de les implémenter dans votre application.
 `,
     )
-    .setVersion('1.0.0')
+    .setVersion('2.1.0')
     .setContact('DIGIFAZ Team', 'https://digifaz.com', 'contact@digifaz.com')
     .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .addBearerAuth(

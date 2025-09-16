@@ -36,10 +36,16 @@ export class Transaction {
 
   @ManyToOne(() => PaymentGateway)
   @JoinColumn({ name: 'payment_gateway_id' })
-  payment_gateway: PaymentGateway;
+  gateway: PaymentGateway;
 
-  @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
-  gateway_transaction_id: string;
+  @Column({ type: 'varchar', length: 255, unique: true })
+  reference: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  external_reference: string;
+
+  @Column({ type: 'json', nullable: true })
+  meta: Record<string, any>;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
@@ -66,7 +72,7 @@ export class Transaction {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   fee_amount: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   net_amount: number;
 
   @Column({ type: 'text', nullable: true })

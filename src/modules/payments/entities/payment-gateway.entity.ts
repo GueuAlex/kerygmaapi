@@ -14,6 +14,9 @@ export class PaymentGateway {
   @Column({ unique: true })
   name: string;
 
+  @Column()
+  type: string;
+
   @Column({ type: 'json', nullable: true })
   config: Record<string, any>;
 
