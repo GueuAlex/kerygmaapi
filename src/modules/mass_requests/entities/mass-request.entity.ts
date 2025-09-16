@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { MassRequestType } from './mass-request-type.entity';
+import { Transaction } from '../../payments/entities/transaction.entity';
 
 @Entity('mass_requests')
 export class MassRequest {
@@ -58,8 +59,9 @@ export class MassRequest {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   total_amount: number;
 
-  @Column({ nullable: true })
-  payment_id: number;
+  @ManyToOne(() => Transaction, { nullable: true })
+  @JoinColumn({ name: 'payment_id' })
+  payment: Transaction;
 
   @Column({ type: 'text', nullable: true })
   cancellation_reason: string;

@@ -432,7 +432,7 @@ export class MassRequestsService {
       message_additionnel: request.message_additionnel,
       status: request.status as MassRequestStatus,
       total_amount: request.total_amount,
-      payment_id: request.payment_id,
+      payment_id: request.payment?.id || null,
       cancellation_reason: request.cancellation_reason,
       cancelled_at: request.cancelled_at,
       created_at: request.created_at,

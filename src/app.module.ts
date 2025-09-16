@@ -16,6 +16,8 @@ import { RolesModule } from './modules/roles/roles.module';
 import { ParishesModule } from './modules/parishes/parishes.module';
 import { MassesModule } from './modules/masses/masses.module';
 import { MassRequestsModule } from './modules/mass_requests/mass-requests.module';
+import { OfferingsModule } from './modules/offerings/offerings.module';
+import { ContributionsModule } from './modules/contributions/contributions.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -40,6 +42,8 @@ import { AuthModule } from './auth/auth.module';
     ParishesModule,
     MassesModule,
     MassRequestsModule,
+    OfferingsModule,
+    ContributionsModule,
     AuthModule,
   ],
   controllers: [AppController],

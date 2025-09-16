@@ -72,6 +72,7 @@ Le système utilise des permissions **par ressource et par action** au lieu des 
 - **parishes** : Gestion des paroisses  
 - **masses** : Calendrier et demandes de messes
 - **roles** : Gestion des rôles et permissions
+- **offerings** : Gestion des offrandes et campagnes
 - ***** : Toutes les ressources (super-admin)
 
 ---
@@ -148,8 +149,9 @@ En cas d'accès refusé :
 ✅ **Parishes** : Gestion des paroisses  
 ✅ **Masses** : Calendrier liturgique et types de célébrations  
 ✅ **Mass-Requests** : Demandes de messes et intentions  
+✅ **Offerings** : Gestion des offrandes, types et campagnes avec dons anonymes
 
-🔄 **À venir** : Offrandes, Contributions, Finances, Rapports
+🔄 **À venir** : Contributions, Finances, Rapports
 
 ---
 

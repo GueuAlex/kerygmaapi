@@ -10,6 +10,21 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { PaymentGateway } from './payment-gateway.entity';
 
+export enum TransactionType {
+  MASS_REQUEST = 'mass_request',
+  OFFERING = 'offering',
+  CONTRIBUTION = 'contribution',
+  REFUND = 'refund',
+}
+
+export enum TransactionStatus {
+  PENDING = 'pending',
+  SUCCESS = 'success',
+  FAILED = 'failed',
+  REFUNDED = 'refunded',
+  CANCELLED = 'cancelled',
+}
+
 @Entity('transactions')
 export class Transaction {
   @PrimaryGeneratedColumn()
@@ -20,20 +35,42 @@ export class Transaction {
   user: User;
 
   @ManyToOne(() => PaymentGateway)
-  @JoinColumn({ name: 'gateway_id' })
-  gateway: PaymentGateway;
+  @JoinColumn({ name: 'payment_gateway_id' })
+  payment_gateway: PaymentGateway;
+
+  @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
+  gateway_transaction_id: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @Column({ length: 50 })
+  @Column({ type: 'varchar', length: 3, default: 'XOF' })
   currency: string;
 
-  @Column({ length: 50 })
-  status: string;
+  @Column({
+    type: 'enum',
+    enum: TransactionStatus,
+    default: TransactionStatus.PENDING,
+  })
+  status: TransactionStatus;
 
-  @Column({ type: 'json', nullable: true })
-  meta: Record<string, any>;
+  @Column({
+    type: 'enum',
+    enum: TransactionType,
+  })
+  transaction_type: TransactionType;
+
+  @Column()
+  related_object_id: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  fee_amount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  net_amount: number;
+
+  @Column({ type: 'text', nullable: true })
+  failure_reason: string;
 
   @CreateDateColumn()
   created_at: Date;
