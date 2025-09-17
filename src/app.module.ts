@@ -2,7 +2,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { getTypeOrmConfig } from './config/typeorm.config';
@@ -35,6 +37,12 @@ import { AuthModule } from './auth/auth.module';
       imports: [ConfigModule],
       useFactory: getTypeOrmConfig,
       inject: [ConfigService],
+    }),
+
+    // Configuration pour servir les fichiers statiques
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     // Modules métier (décommentez selon vos besoins)

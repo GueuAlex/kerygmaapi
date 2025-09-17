@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNumber, IsObject, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { TransactionStatus, TransactionType } from '../entities/transaction.entity';
+import { GatewayType } from '../enums/gateway-type.enum';
 
 export class CreatePaymentDto {
   @ApiPropertyOptional({
@@ -127,11 +128,30 @@ export class PaymentGatewayResponseDto {
   @ApiProperty({ description: 'Nom de la passerelle' })
   name: string;
 
-  @ApiProperty({ description: 'Type de passerelle' })
+  @ApiProperty({ 
+    description: 'Type de passerelle', 
+    enum: ['mobile_money', 'card', 'bank_transfer'] 
+  })
   type: string;
 
-  @ApiProperty({ description: 'Configuration' })
+  @ApiPropertyOptional({ description: 'Slug de la passerelle', enum: GatewayType })
+  slug?: GatewayType;
+
+  @ApiPropertyOptional({ description: 'URL du logo' })
+  logo?: string;
+
+  @ApiProperty({ description: 'Configuration de la passerelle' })
   config: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'Pourcentage de frais de transaction' })
+  transaction_fee_percentage?: number;
+
+  @ApiProperty({ 
+    description: 'Qui paie les frais de transaction',
+    enum: ['donor', 'parish', 'shared'],
+    default: 'donor'
+  })
+  transaction_fee_payer: string;
 
   @ApiProperty({ description: 'Statut actif' })
   is_active: boolean;

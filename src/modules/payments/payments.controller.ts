@@ -9,7 +9,11 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  Put,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -17,6 +21,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import {
@@ -25,7 +30,10 @@ import {
   TransactionResponseDto,
   PaymentGatewayResponseDto,
 } from './dto/create-payment.dto';
+import { CreateGatewayDto } from './dto/create-gateway.dto';
+import { UpdateGatewayDto } from './dto/update-gateway.dto';
 import { TransactionType } from './entities/transaction.entity';
+import { multerConfig } from '../../config/multer.config';
 
 @ApiTags('Paiements et Transactions')
 @ApiBearerAuth()
@@ -197,5 +205,58 @@ export class PaymentsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<PaymentGatewayResponseDto> {
     return this.paymentsService.findGatewayById(id);
+  }
+
+  @Post('gateways')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('logo', multerConfig))
+  @ApiOperation({
+    summary: 'Créer une nouvelle passerelle de paiement',
+    description: 'Crée une nouvelle passerelle avec upload de logo optionnel'
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description: 'Passerelle créée avec succès',
+    type: PaymentGatewayResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides ou fichier non autorisé',
+  })
+  async createGateway(
+    @Body() createGatewayDto: CreateGatewayDto,
+    @UploadedFile() logo?: Express.Multer.File,
+  ): Promise<PaymentGatewayResponseDto> {
+    return this.paymentsService.createGateway(createGatewayDto, logo);
+  }
+
+  @Put('gateways/:id')
+  @UseInterceptors(FileInterceptor('logo', multerConfig))
+  @ApiOperation({
+    summary: 'Modifier une passerelle de paiement',
+    description: 'Modifie une passerelle existante avec upload de logo optionnel'
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'id', description: 'ID de la passerelle' })
+  @ApiResponse({
+    status: 200,
+    description: 'Passerelle modifiée avec succès',
+    type: PaymentGatewayResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Passerelle non trouvée',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides ou fichier non autorisé',
+  })
+  async updateGateway(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateGatewayDto: UpdateGatewayDto,
+    @UploadedFile() logo?: Express.Multer.File,
+  ): Promise<PaymentGatewayResponseDto> {
+    return this.paymentsService.updateGateway(id, updateGatewayDto, logo);
   }
 }

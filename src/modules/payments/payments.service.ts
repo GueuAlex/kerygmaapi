@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { PaymentGateway } from './entities/payment-gateway.entity';
 import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
 import { CreatePaymentDto, UpdateTransactionStatusDto, TransactionResponseDto, PaymentGatewayResponseDto } from './dto/create-payment.dto';
+import { CreateGatewayDto } from './dto/create-gateway.dto';
+import { UpdateGatewayDto } from './dto/update-gateway.dto';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 @Injectable()
 export class PaymentsService {
@@ -142,6 +146,54 @@ export class PaymentsService {
     return this.mapGatewayToResponseDto(gateway);
   }
 
+  async createGateway(createGatewayDto: CreateGatewayDto, logoFile?: Express.Multer.File): Promise<PaymentGatewayResponseDto> {
+    let logoPath: string | undefined;
+
+    if (logoFile) {
+      logoPath = `/uploads/gateway-logos/${logoFile.filename}`;
+    }
+
+    const gateway = this.gatewayRepository.create({
+      ...createGatewayDto,
+      logo: logoPath,
+    });
+
+    const savedGateway = await this.gatewayRepository.save(gateway);
+    return this.mapGatewayToResponseDto(savedGateway);
+  }
+
+  async updateGateway(id: number, updateGatewayDto: UpdateGatewayDto, logoFile?: Express.Multer.File): Promise<PaymentGatewayResponseDto> {
+    const gateway = await this.gatewayRepository.findOne({ where: { id } });
+
+    if (!gateway) {
+      throw new NotFoundException(`Passerelle avec l'ID ${id} non trouvée`);
+    }
+
+    // Mettre à jour seulement les champs fournis dans le DTO
+    Object.keys(updateGatewayDto).forEach(key => {
+      if (updateGatewayDto[key] !== undefined) {
+        gateway[key] = updateGatewayDto[key];
+      }
+    });
+
+    // Gestion du logo seulement si un fichier est fourni
+    if (logoFile) {
+      // Supprimer l'ancien logo s'il existe
+      if (gateway.logo) {
+        try {
+          const oldLogoPath = join(process.cwd(), gateway.logo);
+          await unlink(oldLogoPath);
+        } catch (error) {
+          // Ignorer l'erreur si le fichier n'existe pas
+        }
+      }
+      gateway.logo = `/uploads/gateway-logos/${logoFile.filename}`;
+    }
+
+    const updatedGateway = await this.gatewayRepository.save(gateway);
+    return this.mapGatewayToResponseDto(updatedGateway);
+  }
+
   // ===================== MÉTHODES UTILITAIRES =====================
 
   private generateTransactionReference(type: TransactionType): string {
@@ -172,7 +224,11 @@ export class PaymentsService {
       id: gateway.id,
       name: gateway.name,
       type: gateway.type,
+      slug: gateway.slug,
+      logo: gateway.logo,
       config: gateway.config,
+      transaction_fee_percentage: gateway.transaction_fee_percentage,
+      transaction_fee_payer: gateway.transaction_fee_payer,
       is_active: gateway.is_active,
       created_at: gateway.created_at,
       updated_at: gateway.updated_at,

@@ -36,14 +36,27 @@
   # Copy package files
   COPY package.json pnpm-lock.yaml ./
   
-  # Install production dependencies only
+  # Install production dependencies and TypeORM CLI
   RUN pnpm install --prod --frozen-lockfile
+  RUN pnpm add -D typeorm ts-node
   
   # Copy built application
   COPY --from=build /app/dist ./dist
   
+  # Copy migrations and configuration
+  COPY src/migrations ./src/migrations
+  COPY src/config/typeorm-migration.config.ts ./src/config/typeorm-migration.config.ts
+  COPY tsconfig.json ./
+  
   # Copy environment template (will be overridden by docker-compose)
   COPY environments/prod/.env .env
+  
+  # Copy entrypoint script
+  COPY docker/entrypoint.prod.sh ./entrypoint.sh
+  RUN chmod +x ./entrypoint.sh
+  
+  # Install netcat for database waiting
+  RUN apk add --no-cache netcat-openbsd
   
   EXPOSE 3000
   
@@ -51,4 +64,4 @@
   HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
   
-  CMD ["node", "dist/main.js"]
+  CMD ["./entrypoint.sh"]
