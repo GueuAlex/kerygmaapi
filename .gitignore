@@ -80,3 +80,7 @@ backup/
 #ignorer les fichiers .sql
 *.sql
 
+@scripts
+scripts/*
+
+
