@@ -12,9 +12,12 @@ const envPath =
 
 config({ path: envPath });
 
+// Pour les commandes CLI, utiliser localhost au lieu de 'db' 
+const host = process.env.DB_HOST === 'db' ? 'localhost' : (process.env.DB_HOST || 'localhost');
+
 export default new DataSource({
   type: 'mysql',
-  host: process.env.DB_HOST || 'localhost',
+  host: host,
   port: parseInt(process.env.DB_PORT || '3306'),
   username: process.env.DB_USERNAME || 'dev',
   password: process.env.DB_PASSWORD || 'devpass',

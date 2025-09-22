@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🔍 Vérification des migrations manquantes...${NC}"
+echo "🔍 Vérification des migrations manquantes..."
 
 # Vérifier si les services Docker sont actifs
 if ! docker-compose -f docker/docker-compose.yml ps | grep -q "Up"; then
