@@ -223,7 +223,7 @@ export class QueryOfferingsDto {
     example: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : undefined)
   @IsNumber()
   offering_type_id?: number;
 
@@ -266,7 +266,7 @@ export class QueryOfferingsDto {
     example: 1000,
   })
   @IsOptional()
-  @Transform(({ value }) => parseFloat(value))
+  @Transform(({ value }) => value ? parseFloat(value) : undefined)
   @IsNumber()
   min_amount?: number;
 
@@ -275,7 +275,7 @@ export class QueryOfferingsDto {
     example: 100000,
   })
   @IsOptional()
-  @Transform(({ value }) => parseFloat(value))
+  @Transform(({ value }) => value ? parseFloat(value) : undefined)
   @IsNumber()
   max_amount?: number;
 
@@ -293,7 +293,7 @@ export class QueryOfferingsDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : undefined)
   @IsNumber()
   page?: number;
 
@@ -303,7 +303,7 @@ export class QueryOfferingsDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : undefined)
   @IsNumber()
   limit?: number;
 

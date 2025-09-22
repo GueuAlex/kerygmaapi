@@ -32,7 +32,7 @@ import {
 } from './dto/contribution-card.dto';
 
 @ApiTags('Contributions')
-@Controller('api/v1/contributions')
+@Controller('contributions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class ContributionsController {
