@@ -36,7 +36,7 @@ import { TransactionType } from './entities/transaction.entity';
 import { multerConfig } from '../../config/multer.config';
 
 @ApiTags('Paiements et Transactions')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

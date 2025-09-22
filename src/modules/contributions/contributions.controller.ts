@@ -34,7 +34,7 @@ import {
 @ApiTags('Contributions')
 @Controller('api/v1/contributions')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class ContributionsController {
   constructor(private readonly contributionsService: ContributionsService) {}
 

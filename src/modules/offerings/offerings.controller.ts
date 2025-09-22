@@ -55,7 +55,7 @@ import { RequirePermissions } from '../../auth/decorators/permissions.decorator'
 
 @ApiTags('Offrandes')
 @Controller('offerings')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class OfferingsController {
   constructor(private readonly offeringsService: OfferingsService) {}
