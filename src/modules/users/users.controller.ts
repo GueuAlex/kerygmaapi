@@ -198,8 +198,8 @@ Permet à un utilisateur de modifier ses propres informations :
     @Request() req: { user: any },
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    // Empêcher la modification du rôle et du statut par l'utilisateur lui-même
-    const { role, status, ...allowedUpdates } = updateUserDto;
+    // Empêcher la modification du statut par l'utilisateur lui-même
+    const { status, ...allowedUpdates } = updateUserDto;
     return this.usersService.update(req.user.userId, allowedUpdates);
   }
 

@@ -104,3 +104,4 @@ Le projet utilise pnpm comme gestionnaire de packages et ESLint avec TypeScript 
 
 ### Processus de versionnement et deploiement
 - Pour les commits, push et deploiements, je (le developpeur) indiquerai quand les effectuer
+- pour les test en prod ou en dev utilise toujours le user login: test@test.com, pass : P@ssword

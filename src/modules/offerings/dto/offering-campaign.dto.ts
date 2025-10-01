@@ -7,8 +7,6 @@ import {
   IsPositive,
   IsEnum,
   IsDateString,
-  IsObject,
-  ValidateNested,
   IsUrl,
   IsBoolean,
   Min,
@@ -16,53 +14,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { CampaignStatus } from '../entities/offering-campaign.entity';
 
-export class CampaignSettingsDto {
-  @ApiPropertyOptional({
-    description: 'Campagne publique visible par tous',
-    example: true,
-    default: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  is_public?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Autoriser les dons anonymes',
-    example: true,
-    default: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  allow_anonymous?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Envoyer des reçus automatiquement',
-    example: true,
-    default: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  send_receipts?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Seuil de notification en FCFA',
-    example: 100000,
-  })
-  @IsOptional()
-  @IsNumber()
-  @IsPositive()
-  notification_threshold?: number;
-
-  @ApiPropertyOptional({
-    description: 'Champs personnalisés pour les dons',
-    example: ['Nom de famille', 'Téléphone', 'Adresse'],
-    type: [String],
-  })
-  @IsOptional()
-  custom_fields?: string[];
-}
-
-export class CreateCampaignDto {
+export class CreateOfferingCampaignDto {
   @ApiProperty({
     description: 'Nom de la campagne',
     example: 'Collecte de Noël 2025',
@@ -114,18 +66,9 @@ export class CreateCampaignDto {
   @IsUrl()
   image_url?: string;
 
-  @ApiPropertyOptional({
-    description: 'Configuration de la campagne',
-    type: CampaignSettingsDto,
-  })
-  @IsOptional()
-  @IsObject()
-  @ValidateNested()
-  @Type(() => CampaignSettingsDto)
-  settings?: CampaignSettingsDto;
 }
 
-export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
+export class UpdateOfferingCampaignDto extends PartialType(CreateOfferingCampaignDto) {
   @ApiPropertyOptional({
     description: 'Statut de la campagne',
     enum: CampaignStatus,
@@ -136,7 +79,7 @@ export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   status?: CampaignStatus;
 }
 
-export class CampaignResponseDto {
+export class OfferingCampaignResponseDto {
   @ApiProperty({
     description: 'Identifiant unique de la campagne',
     example: 'christmas-2025',
@@ -189,18 +132,6 @@ export class CampaignResponseDto {
   image_url: string | null;
 
   @ApiProperty({
-    description: 'Configuration de la campagne',
-    example: {
-      is_public: true,
-      allow_anonymous: true,
-      send_receipts: true,
-      notification_threshold: 100000,
-    },
-    nullable: true,
-  })
-  settings: CampaignSettingsDto | null;
-
-  @ApiProperty({
     description: 'Statistiques de la campagne',
     example: {
       total_raised: 2500000,
@@ -237,7 +168,7 @@ export class CampaignResponseDto {
   updated_at: Date;
 }
 
-export class QueryCampaignsDto {
+export class QueryOfferingCampaignsDto {
   @ApiPropertyOptional({
     description: 'Recherche par nom de campagne',
     example: 'noël',
@@ -276,7 +207,7 @@ export class QueryCampaignsDto {
     example: true,
   })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   is_public?: boolean;
 
@@ -286,8 +217,7 @@ export class QueryCampaignsDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  @IsNumber()
+  @Type(() => Number)
   page?: number;
 
   @ApiPropertyOptional({
@@ -296,8 +226,7 @@ export class QueryCampaignsDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  @IsNumber()
+  @Type(() => Number)
   limit?: number;
 
   @ApiPropertyOptional({
@@ -319,12 +248,12 @@ export class QueryCampaignsDto {
   sortOrder?: 'ASC' | 'DESC';
 }
 
-export class CampaignsListResponseDto {
+export class OfferingCampaignsListResponseDto {
   @ApiProperty({
     description: 'Liste des campagnes',
-    type: [CampaignResponseDto],
+    type: [OfferingCampaignResponseDto],
   })
-  data: CampaignResponseDto[];
+  data: OfferingCampaignResponseDto[];
 
   @ApiProperty({
     description: 'Métadonnées de pagination',

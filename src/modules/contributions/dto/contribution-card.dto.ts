@@ -143,10 +143,11 @@ export class UpdateCardDto {
 
 export class CardResponseDto {
   @ApiProperty({
-    description: 'ID de la carte',
-    example: 1,
+    description: 'UUID unique de la carte',
+    example: 'a1b2c3d4-e5f6-4a5b-8c9d-1e2f3a4b5c6d',
+    format: 'uuid',
   })
-  id: number;
+  id: string;
 
   @ApiProperty({
     description: `
@@ -277,13 +278,13 @@ export class QueryCardsDto {
   campaign_id?: number;
 
   @ApiPropertyOptional({
-    description: 'Filtrer par utilisateur',
-    example: 123,
+    description: 'Filtrer par utilisateur (UUID)',
+    example: 'a1b2c3d4-e5f6-4a5b-8c9d-1e2f3a4b5c6d',
+    format: 'uuid',
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  @IsNumber()
-  user_id?: number;
+  @IsString()
+  user_id?: string;
 
   @ApiPropertyOptional({
     description: 'Filtrer par statut',

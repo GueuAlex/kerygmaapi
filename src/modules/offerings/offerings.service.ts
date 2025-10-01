@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { Offering, OfferingStatus } from './entities/offering.entity';
 import { OfferingType } from './entities/offering-type.entity';
 import { OfferingCampaign, CampaignStatus } from './entities/offering-campaign.entity';
-import { User, UserRole } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 
 import { 
   CreateOfferingTypeDto, 
@@ -29,11 +29,11 @@ import {
 } from './dto/offering.dto';
 
 import {
-  CreateCampaignDto,
-  UpdateCampaignDto,
-  CampaignResponseDto,
-  QueryCampaignsDto,
-  CampaignsListResponseDto
+  CreateOfferingCampaignDto,
+  UpdateOfferingCampaignDto,
+  OfferingCampaignResponseDto,
+  QueryOfferingCampaignsDto,
+  OfferingCampaignsListResponseDto
 } from './dto/offering-campaign.dto';
 
 @Injectable()
@@ -56,9 +56,13 @@ export class OfferingsService {
     
     const user = await this.userRepository.findOne({
       where: { id: userId },
+      relations: ['userRoles', 'userRoles.role'],
     });
     
-    return user?.role === UserRole.ADMIN || user?.role === UserRole.PARISH_ADMIN;
+    if (!user || !user.userRoles) return false;
+    
+    const roleNames = user.userRoles.map((ur) => ur.role.name);
+    return roleNames.includes('admin') || roleNames.includes('parish_admin');
   }
 
   private async canModifyOffering(offeringUserId: string | null, currentUserId?: string): Promise<boolean> {
@@ -233,7 +237,7 @@ export class OfferingsService {
       message: createDto.message,
       payment_method: createDto.payment_method,
       anonymous_donor_info: createDto.anonymous_donor_info,
-      campaign_id: createDto.campaign_id,
+      campaign: createDto.campaign_id ? { id: createDto.campaign_id } : undefined,
       status: OfferingStatus.PENDING,
     });
 
@@ -374,7 +378,12 @@ export class OfferingsService {
 
   // ===================== CAMPAGNES =====================
 
-  async createCampaign(createDto: CreateCampaignDto, userId: string): Promise<CampaignResponseDto> {
+  async createCampaign(createDto: CreateOfferingCampaignDto, userId: string): Promise<OfferingCampaignResponseDto> {
+    // Valider que l'utilisateur est authentifie
+    if (!userId) {
+      throw new BadRequestException('Utilisateur non authentifie');
+    }
+
     // Valider les dates
     if (createDto.start_date >= createDto.end_date) {
       throw new BadRequestException('La date de fin doit être postérieure à la date de début');
@@ -390,18 +399,26 @@ export class OfferingsService {
     return this.findCampaignById(savedCampaign.id);
   }
 
-  async findAllCampaigns(queryDto: QueryCampaignsDto): Promise<CampaignsListResponseDto> {
+  async findAllCampaigns(queryDto: QueryOfferingCampaignsDto): Promise<OfferingCampaignsListResponseDto> {
+    console.log('🔍 [OFFERINGS SERVICE] Données reçues du controller:', JSON.stringify(queryDto, null, 2));
+    
     const {
       search,
       status,
       start_date,
       end_date,
       is_public,
-      page = 1,
-      limit = 10,
       sortBy = 'created_at',
       sortOrder = 'DESC'
     } = queryDto;
+
+    // Conversion et valeurs par défaut pour les paramètres numériques
+    const page = typeof queryDto.page === 'string' ? parseInt(queryDto.page, 10) || 1 : queryDto.page || 1;
+    const limit = typeof queryDto.limit === 'string' ? parseInt(queryDto.limit, 10) || 10 : queryDto.limit || 10;
+
+    console.log('📊 [OFFERINGS SERVICE] Paramètres après destructuration:', {
+      search, status, start_date, end_date, is_public, page, limit, sortBy, sortOrder
+    });
 
     const queryBuilder = this.campaignRepository.createQueryBuilder('campaign');
 
@@ -424,11 +441,6 @@ export class OfferingsService {
       queryBuilder.andWhere('campaign.end_date <= :end_date', { end_date });
     }
 
-    if (is_public !== undefined) {
-      queryBuilder.andWhere('campaign.settings->>\'is_public\' = :is_public', { 
-        is_public: is_public.toString() 
-      });
-    }
 
     // Tri
     queryBuilder.orderBy(`campaign.${sortBy}`, sortOrder);
@@ -455,7 +467,7 @@ export class OfferingsService {
     };
   }
 
-  async findCampaignById(id: string): Promise<CampaignResponseDto> {
+  async findCampaignById(id: string): Promise<OfferingCampaignResponseDto> {
     const campaign = await this.campaignRepository.findOne({
       where: { id }
     });
@@ -467,7 +479,7 @@ export class OfferingsService {
     return this.mapCampaignToResponse(campaign);
   }
 
-  async updateCampaign(id: string, updateDto: UpdateCampaignDto, userId: string): Promise<CampaignResponseDto> {
+  async updateCampaign(id: string, updateDto: UpdateOfferingCampaignDto, userId: string): Promise<OfferingCampaignResponseDto> {
     const campaign = await this.campaignRepository.findOne({
       where: { id }
     });
@@ -511,7 +523,7 @@ export class OfferingsService {
 
     // Vérifier s'il y a des offrandes associées
     const offeringsCount = await this.offeringRepository.count({
-      where: { campaign_id: id }
+      where: { campaign: { id: id } }
     });
 
     if (offeringsCount > 0) {
@@ -638,14 +650,13 @@ export class OfferingsService {
       status: offering.status,
       payment_method: offering.payment_method,
       donor_info: donorInfo,
-      campaign_id: offering.campaign_id,
-      payment_id: offering.payment?.id || null,
+      campaign_id: offering.campaign?.id || null,
       created_at: offering.created_at,
       updated_at: offering.updated_at,
     };
   }
 
-  private async mapCampaignToResponse(campaign: OfferingCampaign): Promise<CampaignResponseDto> {
+  private async mapCampaignToResponse(campaign: OfferingCampaign): Promise<OfferingCampaignResponseDto> {
     // Calculer les statistiques de la campagne
     const stats = await this.calculateCampaignStats(campaign.id);
 
@@ -658,7 +669,6 @@ export class OfferingsService {
       end_date: campaign.end_date,
       status: campaign.status,
       image_url: campaign.image_url,
-      settings: campaign.settings,
       stats,
       created_by_user_id: campaign.created_by_user_id,
       created_at: campaign.created_at,

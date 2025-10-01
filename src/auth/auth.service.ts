@@ -12,7 +12,6 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import {
   User,
-  UserRole,
   UserStatus,
 } from '../modules/users/entities/user.entity';
 import { PasswordReset } from './entities/password-reset.entity';
@@ -39,7 +38,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    const { email, password, fullName, phone, role } = registerDto;
+    const { email, password, fullName, phone, defaultRole } = registerDto;
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.userRepository.findOne({
@@ -60,7 +59,6 @@ export class AuthService {
       password: hashedPassword,
       fullName,
       phone,
-      role: (role as UserRole) || UserRole.USER,
       status: UserStatus.ACTIVE,
     });
 
@@ -68,7 +66,7 @@ export class AuthService {
 
     // Assigner automatiquement le rôle avancé correspondant
     try {
-      await this.assignDefaultAdvancedRole(savedUser.id, role || 'user');
+      await this.assignDefaultAdvancedRole(savedUser.id, defaultRole || 'parishioner');
     } catch (error) {
       console.warn(
         "Erreur lors de l'assignation du rôle avancé:",
@@ -76,11 +74,32 @@ export class AuthService {
       );
     }
 
+    // Recuperer l'utilisateur avec ses roles pour la reponse
+    const userWithRoles = await this.userRepository.findOne({
+      where: { id: savedUser.id },
+      relations: ['userRoles', 'userRoles.role'],
+    });
+
+    // Extraire les roles et permissions
+    const roles = userWithRoles?.userRoles?.map((ur) => ur.role.name) || [];
+    const allPermissions = userWithRoles?.userRoles?.flatMap((ur) => {
+      const rolePermissions = ur.role.permissions;
+      if (!rolePermissions || typeof rolePermissions !== 'object') {
+        return [];
+      }
+      return Object.entries(rolePermissions).flatMap(([module, actions]) => {
+        if (Array.isArray(actions)) {
+          return actions.map((action) => `${module}.${action}`);
+        }
+        return [];
+      });
+    }) || [];
+    const permissions = [...new Set(allPermissions)];
+
     // Générer le token JWT
     const payload: JwtPayload = {
       sub: savedUser.id,
       email: savedUser.email,
-      role: savedUser.role,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -91,8 +110,9 @@ export class AuthService {
         id: savedUser.id,
         email: savedUser.email,
         fullName: savedUser.fullName,
-        role: savedUser.role,
         status: savedUser.status,
+        roles,
+        permissions,
       },
     };
   }
@@ -100,10 +120,11 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
 
-    // Trouver l'utilisateur avec le mot de passe
+    // Trouver l'utilisateur avec le mot de passe et ses roles
     const user = await this.userRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'fullName', 'role', 'status'],
+      select: ['id', 'email', 'password', 'fullName', 'status'],
+      relations: ['userRoles', 'userRoles.role'],
     });
 
     if (!user) {
@@ -127,11 +148,26 @@ export class AuthService {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
+    // Extraire les roles et permissions
+    const roles = user.userRoles?.map((ur) => ur.role.name) || [];
+    const allPermissions = user.userRoles?.flatMap((ur) => {
+      const rolePermissions = ur.role.permissions;
+      if (!rolePermissions || typeof rolePermissions !== 'object') {
+        return [];
+      }
+      return Object.entries(rolePermissions).flatMap(([module, actions]) => {
+        if (Array.isArray(actions)) {
+          return actions.map((action) => `${module}.${action}`);
+        }
+        return [];
+      });
+    }) || [];
+    const permissions = [...new Set(allPermissions)];
+
     // Générer le token JWT
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -142,8 +178,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
-        role: user.role,
         status: user.status,
+        roles,
+        permissions,
       },
     };
   }
@@ -160,8 +197,46 @@ export class AuthService {
     return {
       userId: user.id,
       email: user.email,
-      role: user.role,
       fullName: user.fullName,
+    };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['userRoles', 'userRoles.role'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Extraire les roles et permissions
+    const roles = user.userRoles?.map((ur) => ur.role.name) || [];
+    const allPermissions = user.userRoles?.flatMap((ur) => {
+      const rolePermissions = ur.role.permissions;
+      if (!rolePermissions || typeof rolePermissions !== 'object') {
+        return [];
+      }
+      return Object.entries(rolePermissions).flatMap(([module, actions]) => {
+        if (Array.isArray(actions)) {
+          return actions.map((action) => `${module}.${action}`);
+        }
+        return [];
+      });
+    }) || [];
+    const permissions = [...new Set(allPermissions)];
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      status: user.status,
+      roles,
+      permissions,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 
@@ -330,17 +405,22 @@ export class AuthService {
    */
   private async assignDefaultAdvancedRole(
     userId: string,
-    enumRole: string,
+    roleName: string,
   ): Promise<void> {
-    // Correspondance entre rôles enum et rôles avancés
-    const roleMapping = {
-      admin: 'super_admin',
-      priest: 'parish_priest',
-      parish_admin: 'secretary',
-      user: 'basic_user',
-    };
+    // Rôles disponibles dans le système avancé
+    const validRoles = [
+      'super_admin',
+      'parish_manager',
+      'priest',
+      'treasurer',
+      'secretary',
+      'volunteer',
+      'parishioner',
+    ];
 
-    const advancedRoleName = roleMapping[enumRole] || 'basic_user';
+    const advancedRoleName = validRoles.includes(roleName)
+      ? roleName
+      : 'parishioner';
 
     try {
       // Chercher le rôle avancé par nom
@@ -354,8 +434,8 @@ export class AuthService {
     } catch (error) {
       // Si les rôles avancés n'existent pas encore, les créer d'abord
       const isNotFoundError =
-        (error as any)?.status === 404 ||
-        (error instanceof Error && error.message.includes('non trouvé'));
+        (error instanceof Error && error.message.includes('non trouvé')) ||
+        (error && typeof error === 'object' && 'status' in error && error.status === 404);
 
       if (isNotFoundError) {
         await this.rolesService.seedDefaultRoles();

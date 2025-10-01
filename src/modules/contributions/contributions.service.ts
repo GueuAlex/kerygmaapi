@@ -1,8 +1,8 @@
-import { 
-  Injectable, 
-  NotFoundException, 
+import {
+  Injectable,
+  NotFoundException,
   BadRequestException,
-  ConflictException 
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,6 +16,7 @@ import {
   CampaignResponseDto,
   QueryCampaignsDto,
   CampaignStatus,
+  TargetGroup,
 } from './dto/contribution-campaign.dto';
 import {
   CreateCardDto,
@@ -53,19 +54,26 @@ export class ContributionsService {
     const createdByUser = await this.userRepository.findOne({
       where: { id: createdByUserId },
     });
-    
+
     if (!createdByUser) {
       throw new NotFoundException('Utilisateur createur non trouve');
     }
 
     // Validation dates
-    if (createDto.end_date && new Date(createDto.start_date) >= new Date(createDto.end_date)) {
-      throw new BadRequestException('La date de fin doit etre posterieure a la date de debut');
+    if (
+      createDto.end_date &&
+      new Date(createDto.start_date) >= new Date(createDto.end_date)
+    ) {
+      throw new BadRequestException(
+        'La date de fin doit etre posterieure a la date de debut',
+      );
     }
 
     // Validation montant fixe
     if (createDto.is_fixed_amount && !createDto.fixed_amount) {
-      throw new BadRequestException('Le montant fixe est requis quand is_fixed_amount = true');
+      throw new BadRequestException(
+        'Le montant fixe est requis quand is_fixed_amount = true',
+      );
     }
 
     const campaign = this.campaignRepository.create({
@@ -75,6 +83,11 @@ export class ContributionsService {
       end_date: createDto.end_date,
       is_fixed_amount: createDto.is_fixed_amount || false,
       fixed_amount: createDto.fixed_amount || undefined,
+      target_group: createDto.target_group || 'all',
+      target_participant_count: createDto.target_participant_count || undefined,
+      target_amount: createDto.target_amount || undefined,
+      minimum_individual_amount:
+        createDto.minimum_individual_amount || undefined,
       created_by_user: createdByUser,
       status: CampaignStatus.ACTIVE,
     });
@@ -92,7 +105,8 @@ export class ContributionsService {
       limit = 10,
     } = queryDto;
 
-    const query = this.campaignRepository.createQueryBuilder('campaign')
+    const query = this.campaignRepository
+      .createQueryBuilder('campaign')
       .leftJoinAndSelect('campaign.created_by_user', 'creator')
       .leftJoin('campaign.cards', 'cards')
       .leftJoin('cards.contributions', 'contributions')
@@ -107,14 +121,21 @@ export class ContributionsService {
     }
 
     if (start_date_from && start_date_to) {
-      query.andWhere('campaign.start_date BETWEEN :start_date_from AND :start_date_to', {
+      query.andWhere(
+        'campaign.start_date BETWEEN :start_date_from AND :start_date_to',
+        {
+          start_date_from,
+          start_date_to,
+        },
+      );
+    } else if (start_date_from) {
+      query.andWhere('campaign.start_date >= :start_date_from', {
         start_date_from,
+      });
+    } else if (start_date_to) {
+      query.andWhere('campaign.start_date <= :start_date_to', {
         start_date_to,
       });
-    } else if (start_date_from) {
-      query.andWhere('campaign.start_date >= :start_date_from', { start_date_from });
-    } else if (start_date_to) {
-      query.andWhere('campaign.start_date <= :start_date_to', { start_date_to });
     }
 
     // Pagination
@@ -185,9 +206,11 @@ export class ContributionsService {
     if (updateDto.end_date) {
       const startDate = new Date(campaign.start_date);
       const newEndDate = new Date(updateDto.end_date);
-      
+
       if (startDate >= newEndDate) {
-        throw new BadRequestException('La date de fin doit etre posterieure a la date de debut');
+        throw new BadRequestException(
+          'La date de fin doit etre posterieure a la date de debut',
+        );
       }
     }
 
@@ -206,7 +229,9 @@ export class ContributionsService {
     }
 
     if (campaign.cards && campaign.cards.length > 0) {
-      throw new ConflictException('Impossible de supprimer une campagne avec des cartes existantes');
+      throw new ConflictException(
+        'Impossible de supprimer une campagne avec des cartes existantes',
+      );
     }
 
     await this.campaignRepository.delete(id);
@@ -226,7 +251,7 @@ export class ContributionsService {
 
     // Verifier que la campagne est active
     if (campaign.status !== CampaignStatus.ACTIVE) {
-      throw new BadRequestException('La campagne n\'est plus active');
+      throw new BadRequestException("La campagne n'est plus active");
     }
 
     // Verifier l'utilisateur si fourni
@@ -235,7 +260,7 @@ export class ContributionsService {
       user = await this.userRepository.findOne({
         where: { id: createDto.user_id },
       });
-      
+
       if (!user) {
         throw new NotFoundException('Utilisateur non trouve');
       }
@@ -277,7 +302,9 @@ export class ContributionsService {
     return cardNumber;
   }
 
-  private formatCampaignResponse(campaign: ContributionCampaign): CampaignResponseDto {
+  private formatCampaignResponse(
+    campaign: ContributionCampaign,
+  ): CampaignResponseDto {
     return {
       id: campaign.id,
       name: campaign.name,
@@ -286,6 +313,10 @@ export class ContributionsService {
       end_date: campaign.end_date,
       is_fixed_amount: campaign.is_fixed_amount,
       fixed_amount: campaign.fixed_amount,
+      target_group: campaign.target_group as TargetGroup,
+      target_participant_count: campaign.target_participant_count,
+      target_amount: campaign.target_amount,
+      minimum_individual_amount: campaign.minimum_individual_amount,
       status: campaign.status as CampaignStatus,
       total_cards: 0, // Sera rempli par la requête
       total_collected: 0, // Sera rempli par la requête
@@ -294,7 +325,7 @@ export class ContributionsService {
     };
   }
 
-  async findCardById(id: number): Promise<CardResponseDto> {
+  async findCardById(id: string): Promise<CardResponseDto> {
     const card = await this.cardRepository
       .createQueryBuilder('card')
       .leftJoinAndSelect('card.campaign', 'campaign')
@@ -322,10 +353,12 @@ export class ContributionsService {
         name: cardEntity.campaign.name,
         status: cardEntity.campaign.status,
       },
-      user: cardEntity.user ? {
-        id: cardEntity.user.id,
-        email: cardEntity.user.email,
-      } : null,
+      user: cardEntity.user
+        ? {
+            id: cardEntity.user.id,
+            email: cardEntity.user.email,
+          }
+        : null,
       phone_number: cardEntity.phone_number,
       initial_amount: cardEntity.initial_amount,
       current_balance: cardEntity.current_balance,
@@ -335,6 +368,211 @@ export class ContributionsService {
       contributions_count: contributionsCount,
       created_at: cardEntity.created_at,
       updated_at: cardEntity.updated_at,
+    };
+  }
+
+  // ========================= CONTRIBUTIONS =========================
+
+  async addContribution(
+    cardId: string,
+    createDto: CreateContributionDto,
+    requestUserId?: string,
+  ): Promise<ContributionResponseDto> {
+    // Vérifier que la carte existe et est active
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId },
+      relations: ['campaign', 'user'],
+    });
+
+    if (!card) {
+      throw new NotFoundException('Carte de contribution non trouvée');
+    }
+
+    if (card.status !== 'active') {
+      throw new BadRequestException("Cette carte n'est plus active");
+    }
+
+    // Validation selon le mode de contribution
+    if (createDto.contribution_method === ContributionMethod.CASH_ON_SITE) {
+      if (!createDto.collected_by_user_id) {
+        throw new BadRequestException(
+          'collected_by_user_id requis pour les contributions en espèces',
+        );
+      }
+
+      // Vérifier que le collecteur existe
+      const collector = await this.userRepository.findOne({
+        where: { id: createDto.collected_by_user_id },
+      });
+      if (!collector) {
+        throw new NotFoundException('Utilisateur collecteur non trouvé');
+      }
+    }
+
+    // Vérifier l'utilisateur contributeur si fourni
+    let contributorUser: User | null = null;
+    if (createDto.contributor_user_id) {
+      contributorUser = await this.userRepository.findOne({
+        where: { id: createDto.contributor_user_id },
+      });
+      if (!contributorUser) {
+        throw new NotFoundException('Utilisateur contributeur non trouvé');
+      }
+    }
+
+    // Obtenir l'utilisateur collecteur si nécessaire
+    let collectedByUser: User | null = null;
+    if (createDto.collected_by_user_id) {
+      collectedByUser = await this.userRepository.findOne({
+        where: { id: createDto.collected_by_user_id },
+      });
+    }
+
+    // Créer la contribution
+    const contribution = this.cardContributionRepository.create();
+    contribution.card = card;
+    contribution.amount = createDto.amount;
+    contribution.contribution_method = createDto.contribution_method;
+    contribution.contributor_user = contributorUser || undefined;
+    contribution.collected_by_user = collectedByUser || undefined;
+    contribution.contribution_date = new Date();
+    contribution.notes = createDto.notes;
+
+    const savedContribution =
+      await this.cardContributionRepository.save(contribution);
+
+    // Mettre à jour le current_balance de la carte
+    await this.updateCardBalance(cardId);
+
+    // Retourner la contribution avec les relations chargées
+    return this.formatContributionResponse(savedContribution);
+  }
+
+  private async updateCardBalance(cardId: string): Promise<void> {
+    // Calculer le total des contributions pour cette carte
+    const result = await this.cardContributionRepository
+      .createQueryBuilder('contribution')
+      .select('SUM(contribution.amount)', 'total')
+      .where('contribution.card_id = :cardId', { cardId })
+      .getRawOne();
+
+    const totalContributions = parseFloat(result.total) || 0;
+
+    // Mettre à jour le current_balance de la carte
+    await this.cardRepository.update(cardId, {
+      current_balance: totalContributions,
+    });
+  }
+
+  async getCardContributions(cardId: string) {
+    // Vérifier que la carte existe
+    const card = await this.cardRepository.findOne({
+      where: { id: cardId },
+    });
+
+    if (!card) {
+      throw new NotFoundException('Carte de contribution non trouvée');
+    }
+
+    // Récupérer toutes les contributions de cette carte
+    const contributions = await this.cardContributionRepository.find({
+      where: { card: { id: cardId } },
+      relations: [
+        'card',
+        'card.campaign',
+        'contributor_user',
+        'collected_by_user',
+        'payment',
+      ],
+      order: { created_at: 'DESC' },
+    });
+
+    return contributions.map(contribution => ({
+      id: contribution.id,
+      card: {
+        id: contribution.card.id,
+        card_number: contribution.card.card_number,
+        campaign_name: contribution.card.campaign.name,
+      },
+      contributor_user: contribution.contributor_user
+        ? {
+            id: contribution.contributor_user.id,
+            email: contribution.contributor_user.email,
+          }
+        : null,
+      amount: contribution.amount,
+      contribution_method: contribution.contribution_method as ContributionMethod,
+      collected_by_user: contribution.collected_by_user
+        ? {
+            id: contribution.collected_by_user.id,
+            email: contribution.collected_by_user.email,
+          }
+        : null,
+      payment: contribution.payment
+        ? {
+            id: contribution.payment.id,
+            status: contribution.payment.status,
+            gateway_transaction_id: contribution.payment.external_reference || '',
+          }
+        : null,
+      contribution_date: contribution.contribution_date,
+      notes: contribution.notes,
+      created_at: contribution.created_at,
+    }));
+  }
+
+  private async formatContributionResponse(
+    contribution: CardContribution,
+  ): Promise<ContributionResponseDto> {
+    // Recharger avec toutes les relations nécessaires
+    const fullContribution = await this.cardContributionRepository.findOne({
+      where: { id: contribution.id },
+      relations: [
+        'card',
+        'card.campaign',
+        'contributor_user',
+        'collected_by_user',
+        'payment',
+      ],
+    });
+
+    if (!fullContribution) {
+      throw new NotFoundException('Contribution non trouvée');
+    }
+
+    return {
+      id: fullContribution.id,
+      card: {
+        id: fullContribution.card.id,
+        card_number: fullContribution.card.card_number,
+        campaign_name: fullContribution.card.campaign.name,
+      },
+      contributor_user: fullContribution.contributor_user
+        ? {
+            id: fullContribution.contributor_user.id,
+            email: fullContribution.contributor_user.email,
+          }
+        : null,
+      amount: fullContribution.amount,
+      contribution_method:
+        fullContribution.contribution_method as ContributionMethod,
+      collected_by_user: fullContribution.collected_by_user
+        ? {
+            id: fullContribution.collected_by_user.id,
+            email: fullContribution.collected_by_user.email,
+          }
+        : null,
+      payment: fullContribution.payment
+        ? {
+            id: fullContribution.payment.id,
+            status: fullContribution.payment.status,
+            gateway_transaction_id:
+              fullContribution.payment.external_reference || '',
+          }
+        : null,
+      contribution_date: fullContribution.contribution_date,
+      notes: fullContribution.notes,
+      created_at: fullContribution.created_at,
     };
   }
 }

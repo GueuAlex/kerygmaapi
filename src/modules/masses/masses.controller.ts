@@ -12,6 +12,7 @@ import {
   UseGuards,
   Request,
   ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -371,9 +372,15 @@ Récupère la liste des prochaines messes actives, triées par date et heure.
     type: [MassCalendarResponseDto],
   })
   async getUpcomingMasses(
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('limit') limit?: string,
   ): Promise<MassCalendarResponseDto[]> {
-    return this.massesService.getUpcomingMasses(limit);
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    
+    if (limit && (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 50)) {
+      throw new BadRequestException('Le paramètre limit doit être un nombre entre 1 et 50');
+    }
+    
+    return this.massesService.getUpcomingMasses(parsedLimit);
   }
 
   @Get('calendar/stats')

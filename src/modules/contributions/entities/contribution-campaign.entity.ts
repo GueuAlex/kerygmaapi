@@ -38,6 +38,22 @@ export class ContributionCampaign {
 
   @Column({
     type: 'enum',
+    enum: ['all', 'adults', 'youth', 'families', 'specific'],
+    default: 'all',
+  })
+  target_group: 'all' | 'adults' | 'youth' | 'families' | 'specific';
+
+  @Column({ type: 'int', nullable: true })
+  target_participant_count: number;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  target_amount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  minimum_individual_amount: number;
+
+  @Column({
+    type: 'enum',
     enum: ['active', 'inactive', 'completed'],
     default: 'active',
   })

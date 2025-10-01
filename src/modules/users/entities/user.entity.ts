@@ -4,15 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  PRIEST = 'priest',
-  PARISH_ADMIN = 'parish_admin',
-  USER = 'user',
-}
+import { UserHasRole } from '../../roles/entities/user-has-role.entity';
 
 export enum UserStatus {
   ACTIVE = 'active',
@@ -60,16 +55,11 @@ export class User {
   phone?: string;
 
   @ApiProperty({
-    description: "Rôle de l'utilisateur",
-    enum: UserRole,
-    example: UserRole.USER,
+    description: 'Rôles assignés à l\'utilisateur',
+    type: () => [UserHasRole],
   })
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.USER,
-  })
-  role: UserRole;
+  @OneToMany(() => UserHasRole, userHasRole => userHasRole.user)
+  userRoles: UserHasRole[];
 
   @ApiProperty({
     description: 'Statut du compte utilisateur',

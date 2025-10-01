@@ -78,7 +78,7 @@ backup/
 *.bak
 
 #ignorer les fichiers .sql
-*.sql
+
 
 @scripts
 scripts/*

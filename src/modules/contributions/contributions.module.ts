@@ -6,6 +6,7 @@ import { ContributionCampaign } from './entities/contribution-campaign.entity';
 import { ContributionCard } from './entities/contribution-card.entity';
 import { CardContribution } from './entities/card-contribution.entity';
 import { User } from '../users/entities/user.entity';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { User } from '../users/entities/user.entity';
       CardContribution,
       User,
     ]),
+    RolesModule,
   ],
   controllers: [ContributionsController],
   providers: [ContributionsService],

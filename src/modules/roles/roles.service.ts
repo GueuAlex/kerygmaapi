@@ -186,49 +186,97 @@ export class RolesService {
     const defaultRoles = [
       {
         name: 'super_admin',
-        description: 'Administrateur système avec tous les droits',
-        permissions: { '*': ['*'] }
+        description: 'Administrateur systeme avec tous les privileges',
+        permissions: {
+          users: ['create', 'read', 'update', 'delete'],
+          parishes: ['create', 'read', 'update', 'delete'],
+          masses: ['create', 'read', 'update', 'delete'],
+          offerings: ['create', 'read', 'update', 'delete'],
+          contributions: ['create', 'read', 'update', 'delete'],
+          payments: ['create', 'read', 'update', 'delete'],
+          roles: ['create', 'read', 'update', 'delete'],
+          reports: ['create', 'read', 'update', 'delete'],
+          notifications: ['create', 'read', 'update', 'delete'],
+          system: ['manage_settings', 'view_logs', 'backup_restore'],
+        },
       },
       {
-        name: 'parish_priest',
-        description: 'Curé de paroisse',
+        name: 'parish_manager',
+        description: 'Gestionnaire de paroisse avec privileges etendus',
         permissions: {
-          masses: ['read', 'write', 'delete'],
-          finances: ['read', 'write'],
-          users: ['read', 'write'],
-          reports: ['read', 'write'],
-          roles: ['read']
-        }
+          users: ['read', 'update'],
+          parishes: ['read', 'update'],
+          masses: ['create', 'read', 'update', 'delete'],
+          offerings: ['create', 'read', 'update', 'delete'],
+          contributions: ['create', 'read', 'update', 'delete'],
+          payments: ['read', 'update'],
+          reports: ['create', 'read'],
+          notifications: ['create', 'read', 'update'],
+        },
+      },
+      {
+        name: 'priest',
+        description: 'Pretre avec acces aux fonctions liturgiques et pastorales',
+        permissions: {
+          users: ['read'],
+          parishes: ['read'],
+          masses: ['create', 'read', 'update'],
+          offerings: ['read'],
+          contributions: ['read'],
+          payments: ['read'],
+          reports: ['read'],
+        },
       },
       {
         name: 'treasurer',
-        description: 'Trésorier de la paroisse',
+        description: 'Tresorier avec acces aux fonctions financieres',
         permissions: {
-          finances: ['read', 'write'],
-          reports: ['read', 'write'],
-          offerings: ['read', 'write'],
-          contributions: ['read', 'write']
-        }
+          users: ['read'],
+          parishes: ['read'],
+          masses: ['read'],
+          offerings: ['create', 'read', 'update'],
+          contributions: ['create', 'read', 'update'],
+          payments: ['create', 'read', 'update'],
+          reports: ['create', 'read'],
+        },
       },
       {
         name: 'secretary',
-        description: 'Secrétaire de paroisse',
+        description: 'Secretaire avec acces aux fonctions administratives',
         permissions: {
-          masses: ['read', 'write'],
-          users: ['read'],
+          users: ['create', 'read', 'update'],
+          parishes: ['read', 'update'],
+          masses: ['create', 'read', 'update'],
+          offerings: ['read'],
+          contributions: ['read'],
+          payments: ['read'],
           reports: ['read'],
-          parishes: ['read', 'write']
-        }
+          notifications: ['create', 'read', 'update'],
+        },
       },
       {
-        name: 'basic_user',
-        description: 'Utilisateur de base avec permissions limitées',
+        name: 'volunteer',
+        description: 'Benevole avec acces limite aux fonctions de base',
         permissions: {
-          profile: ['read', 'write'],
+          users: ['read'],
+          parishes: ['read'],
           masses: ['read'],
-          offerings: ['write']
-        }
-      }
+          offerings: ['read'],
+          contributions: ['read'],
+        },
+      },
+      {
+        name: 'parishioner',
+        description: 'Paroissien/utilisateur normal avec acces aux services principaux',
+        permissions: {
+          users: ['read'],
+          parishes: ['read'],
+          masses: ['create', 'read'],
+          offerings: ['create', 'read'],
+          contributions: ['create', 'read'],
+          payments: ['create', 'read'],
+        },
+      },
     ];
 
     const createdRoles: UserRole[] = [];

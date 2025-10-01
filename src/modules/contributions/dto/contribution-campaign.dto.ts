@@ -18,6 +18,14 @@ export enum CampaignStatus {
   COMPLETED = 'completed',
 }
 
+export enum TargetGroup {
+  ALL = 'all',
+  ADULTS = 'adults',
+  YOUTH = 'youth',
+  FAMILIES = 'families',
+  SPECIFIC = 'specific',
+}
+
 export class CreateCampaignDto {
   @ApiProperty({
     description: 'Nom unique de la campagne de cotisation',
@@ -79,15 +87,46 @@ export class CreateCampaignDto {
 
   @ApiPropertyOptional({
     description: `
-    Définit si la campagne utilise des montants fixes ou variables.
+    **CONCEPT CLÉ** : Détermine le mode de contribution de votre campagne.
     
-    **Montants fixes :**
-    - Tous les contributeurs paient le même montant
-    - Idéal pour des campagnes équitables (ex: cotisation annuelle)
+    ## 🔹 Mode MONTANT FIXE (is_fixed_amount = true)
     
-    **Montants variables :**
-    - Chaque contributeur peut donner le montant de son choix
-    - Plus flexible pour des campagnes de construction
+    **Principe :** Tous les participants contribuent exactement le même montant.
+    
+    **Cas d'usage idéaux :**
+    - 💰 Cotisations annuelles ou mensuelles
+    - 🎫 Frais d'adhésion ou d'inscription
+    - 📋 Contributions pour événements à coût fixe
+    - ⚖️ Campagnes nécessitant l'équité entre membres
+    
+    **Avantages :**
+    - Simplicité administrative
+    - Égalité entre tous les contributeurs
+    - Prévisibilité des revenus
+    - Facilite la gestion comptable
+    
+    **Exemple :** Cotisation paroissiale 2025 = 25,000 FCFA par famille
+    
+    ## 🔹 Mode MONTANT VARIABLE (is_fixed_amount = false)
+    
+    **Principe :** Chaque participant choisit librement son montant de contribution.
+    
+    **Cas d'usage idéaux :**
+    - 🏗️ Construction d'infrastructures (église, école)
+    - 🎯 Projets caritatifs ou sociaux
+    - 💝 Collectes pour urgences ou besoins spéciaux
+    - 🌟 Campagnes volontaires et motivationnelles
+    
+    **Avantages :**
+    - Adaptation aux capacités financières
+    - Potentiel de collecte plus important
+    - Participation inclusive (petites et grosses contributions)
+    - Flexibilité selon les circonstances
+    
+    **Exemple :** Construction nouvelle église - chacun donne selon ses moyens
+    
+    ## ⚠️ **RÈGLE IMPORTANTE**
+    Si is_fixed_amount = true → Le champ fixed_amount devient OBLIGATOIRE
     `,
     example: false,
     default: false,
@@ -98,15 +137,51 @@ export class CreateCampaignDto {
 
   @ApiPropertyOptional({
     description: `
-    Montant obligatoire en FCFA si la campagne utilise des montants fixes.
+    **MONTANT FIXE OBLIGATOIRE** : Le montant exacte que chaque participant doit contribuer.
     
-    **Règles :**
-    - Obligatoire si is_fixed_amount = true
-    - Doit être > 0
-    - Sera le montant par défaut sur toutes les cartes
+    ## 💰 **Quand l'utiliser ?**
+    
+    **OBLIGATOIRE** quand is_fixed_amount = true
+    **IGNORÉ** quand is_fixed_amount = false
+    
+    ## 📋 **Exemples concrets :**
+    
+    **Cotisation annuelle :** 25,000 FCFA par membre adulte
+    - Tous les adultes de la paroisse payent exactement 25,000 FCFA
+    - Aucune variation possible
+    - Facilite la budgétisation : 500 membres × 25,000 = 12,500,000 FCFA
+    
+    **Frais d'inscription événement :** 15,000 FCFA par famille
+    - Chaque famille inscrite paye 15,000 FCFA
+    - Couvre les frais exacts de l'événement
+    - Égalité de traitement
+    
+    **Projet spécifique :** 100,000 FCFA par contributeur
+    - Campagne pour équipement liturgique précis
+    - Montant calculé selon le coût total ÷ nombre de participants
+    
+    ## ⚡ **Impact sur les cartes de contribution :**
+    
+    Quand fixed_amount est défini :
+    - Toutes les cartes créées auront ce montant en "initial_amount"
+    - Les utilisateurs ne peuvent PAS modifier le montant
+    - Le système valide automatiquement les paiements à ce montant exact
+    - Les rapports sont simplifiés (participation = oui/non)
+    
+    ## 💡 **Calculs automatiques possibles :**
+    
+    - **Revenus prévisionnels** = fixed_amount × target_participant_count
+    - **Taux de participation** = cartes_créées ÷ target_participant_count
+    - **Revenus actuels** = fixed_amount × cartes_payées
+    
+    ## ⚠️ **Limites et validations :**
+    
+    - **Minimum** : 100 FCFA (éviter montants ridicules)
+    - **Maximum** : 10,000,000 FCFA (contributions raisonnables)
+    - **Cohérence** : Doit être ≥ minimum_individual_amount si défini
     `,
-    example: 50000,
-    minimum: 1,
+    example: 25000,
+    minimum: 100,
     maximum: 10000000,
   })
   @IsOptional()
@@ -114,6 +189,103 @@ export class CreateCampaignDto {
   @IsPositive()
   @Type(() => Number)
   fixed_amount?: number;
+
+  @ApiPropertyOptional({
+    description: `
+    Groupe cible pour cette campagne de cotisation.
+    
+    **Options disponibles :**
+    - **all** : Tous les paroissiens (par défaut)
+    - **adults** : Adultes uniquement (18+ ans)
+    - **youth** : Jeunes et adolescents
+    - **families** : Familles constituées
+    - **specific** : Groupe spécifique (nécessite définition manuelle)
+    
+    **Utilisation :**
+    - Permet de cibler précisément les participants
+    - Facilite la communication et le suivi
+    - Aide au calcul des objectifs selon le groupe
+    `,
+    enum: TargetGroup,
+    example: TargetGroup.ALL,
+    default: TargetGroup.ALL,
+  })
+  @IsOptional()
+  @IsEnum(TargetGroup)
+  target_group?: TargetGroup;
+
+  @ApiPropertyOptional({
+    description: `
+    Nombre cible de participants pour cette campagne.
+    
+    **Objectif :**
+    - Définit combien de personnes devraient participer
+    - Aide au calcul du pourcentage de participation
+    - Utile pour l'analyse de performance
+    
+    **Calculs automatiques :**
+    - Taux de participation = participants actuels / target_participant_count
+    - Estimation des revenus si combiné avec fixed_amount
+    `,
+    example: 250,
+    minimum: 1,
+    maximum: 10000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  target_participant_count?: number;
+
+  @ApiPropertyOptional({
+    description: `
+    Objectif financier total de la campagne en FCFA.
+    
+    **Purpose :**
+    - Montant total que la campagne vise à collecter
+    - Permet le suivi du pourcentage d'atteinte
+    - Sert de référence pour les rapports
+    
+    **Calculs automatiques :**
+    - Pourcentage atteint = montant collecté / target_amount
+    - Montant restant = target_amount - montant collecté
+    
+    **Note :** Peut être différent de (fixed_amount × target_participant_count)
+    `,
+    example: 5000000,
+    minimum: 1000,
+    maximum: 1000000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  target_amount?: number;
+
+  @ApiPropertyOptional({
+    description: `
+    Montant minimum qu'un participant peut contribuer en FCFA.
+    
+    **Utilisation :**
+    - Applicable uniquement si is_fixed_amount = false
+    - Évite les contributions trop faibles
+    - Simplifie la gestion administrative
+    
+    **Validation :**
+    - Doit être < fixed_amount si fixed_amount est défini
+    - Ignoré si is_fixed_amount = true
+    
+    **Exemple :** Pour éviter les contributions de 100 FCFA difficiles à gérer
+    `,
+    example: 5000,
+    minimum: 100,
+    maximum: 1000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  minimum_individual_amount?: number;
 }
 
 export class UpdateCampaignDto {
@@ -150,14 +322,67 @@ export class UpdateCampaignDto {
   status?: CampaignStatus;
 
   @ApiPropertyOptional({
-    description: 'Montant fixe',
-    minimum: 0,
+    description: `
+    **Montant fixe obligatoire** en FCFA pour cette campagne.
+    
+    **Utilisation :**
+    - Définit le montant exact que chaque participant doit payer
+    - Actif uniquement si la campagne est en mode montant fixe
+    - Remplace la valeur précédente si modifiée
+    
+    **Note :** Modifier ce champ affecte toutes les nouvelles cartes créées après la modification.
+    `,
+    example: 30000,
+    minimum: 100,
+    maximum: 10000000,
   })
   @IsOptional()
   @IsNumber()
   @IsPositive()
   @Type(() => Number)
   fixed_amount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Groupe cible de la campagne',
+    enum: TargetGroup,
+    example: TargetGroup.ALL,
+  })
+  @IsOptional()
+  @IsEnum(TargetGroup)
+  target_group?: TargetGroup;
+
+  @ApiPropertyOptional({
+    description: 'Nombre cible de participants',
+    minimum: 1,
+    maximum: 10000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  target_participant_count?: number;
+
+  @ApiPropertyOptional({
+    description: 'Objectif financier en FCFA',
+    minimum: 1000,
+    maximum: 1000000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  target_amount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Montant minimum individuel en FCFA',
+    minimum: 100,
+    maximum: 1000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  minimum_individual_amount?: number;
 }
 
 export class CampaignResponseDto {
@@ -197,17 +422,93 @@ export class CampaignResponseDto {
   end_date: string | null;
 
   @ApiProperty({
-    description: 'Si les montants sont fixes',
+    description: `
+    **Mode de contribution de cette campagne.**
+    
+    - **true** = Montant fixe (tous les participants payent le même montant)
+    - **false** = Montant variable (chacun choisit son montant)
+    
+    **Impact :** Détermine si fixed_amount est utilisé ou ignoré.
+    `,
     example: false,
   })
   is_fixed_amount: boolean;
 
   @ApiProperty({
-    description: 'Montant fixe en FCFA',
-    example: 50000,
+    description: `
+    **Montant obligatoire par participant** (en FCFA) si is_fixed_amount = true.
+    
+    **Utilisation :**
+    - Actif seulement si is_fixed_amount = true
+    - Null si is_fixed_amount = false
+    - Détermine le montant exact de chaque contribution
+    
+    **Exemples :**
+    - Cotisation annuelle : 25,000 FCFA
+    - Frais d'événement : 15,000 FCFA
+    - Contribution projet : 100,000 FCFA
+    `,
+    example: 25000,
     nullable: true,
   })
   fixed_amount: number | null;
+
+  @ApiProperty({
+    description: `
+    Groupe cible de cette campagne.
+    
+    **Types disponibles :**
+    - **all** : Tous les paroissiens
+    - **adults** : Adultes uniquement (18+ ans)
+    - **youth** : Jeunes et adolescents
+    - **families** : Familles constituees
+    - **specific** : Groupe specifique defini manuellement
+    `,
+    enum: TargetGroup,
+    example: TargetGroup.ALL,
+  })
+  target_group: TargetGroup;
+
+  @ApiProperty({
+    description: `
+    Nombre cible de participants pour cette campagne.
+    
+    **Utilisation :**
+    - Permet de calculer le taux de participation
+    - Aide a estimer les revenus previsionnels
+    - Facilite le suivi des objectifs
+    `,
+    example: 250,
+    nullable: true,
+  })
+  target_participant_count: number | null;
+
+  @ApiProperty({
+    description: `
+    Objectif financier total en FCFA.
+    
+    **Metriques calculees :**
+    - Pourcentage d'atteinte = total_collected / target_amount
+    - Montant restant = target_amount - total_collected
+    `,
+    example: 5000000,
+    nullable: true,
+  })
+  target_amount: number | null;
+
+  @ApiProperty({
+    description: `
+    Montant minimum individuel autorise en FCFA.
+    
+    **Application :**
+    - Actif uniquement pour les campagnes a montant variable
+    - Ignore si is_fixed_amount = true
+    - Evite les micro-contributions difficiles a gerer
+    `,
+    example: 5000,
+    nullable: true,
+  })
+  minimum_individual_amount: number | null;
 
   @ApiProperty({
     description: 'Statut de la campagne',
@@ -286,7 +587,11 @@ export class QueryCampaignsDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return 1;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? 1 : parsed;
+  })
   @IsNumber()
   @Min(1)
   page?: number;
@@ -297,7 +602,11 @@ export class QueryCampaignsDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return 10;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? 10 : parsed;
+  })
   @IsNumber()
   @Min(1)
   limit?: number;

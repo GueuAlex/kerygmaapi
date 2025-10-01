@@ -24,7 +24,6 @@ export class UsersService {
   async findAll(queryDto: QueryUsersDto): Promise<UsersListResponseDto> {
     const {
       search,
-      role,
       status,
       page = 1,
       limit = 10,
@@ -32,7 +31,9 @@ export class UsersService {
       sortOrder = 'DESC',
     } = queryDto;
 
-    const queryBuilder = this.userRepository.createQueryBuilder('user');
+    const queryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRoles')
+      .leftJoinAndSelect('userRoles.role', 'role');
 
     // Filtres de recherche
     if (search) {
@@ -40,10 +41,6 @@ export class UsersService {
         '(user.fullName LIKE :search OR user.email LIKE :search)',
         { search: `%${search}%` },
       );
-    }
-
-    if (role) {
-      queryBuilder.andWhere('user.role = :role', { role });
     }
 
     if (status) {
@@ -71,6 +68,7 @@ export class UsersService {
   async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id },
+      relations: ['userRoles', 'userRoles.role'],
     });
 
     if (!user) {
@@ -83,7 +81,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'fullName', 'role', 'status'],
+      select: ['id', 'email', 'password', 'fullName', 'status'],
     });
   }
 
@@ -138,9 +136,11 @@ export class UsersService {
   async countByRole(): Promise<Record<string, number>> {
     const result = await this.userRepository
       .createQueryBuilder('user')
-      .select('user.role', 'role')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('user.role')
+      .leftJoin('user.userRoles', 'userRoles')
+      .leftJoin('userRoles.role', 'role')
+      .select('role.name', 'role')
+      .addSelect('COUNT(DISTINCT user.id)', 'count')
+      .groupBy('role.name')
       .getRawMany();
 
     return result.reduce((acc, item) => {
@@ -179,7 +179,7 @@ export class UsersService {
     // Récupérer l'utilisateur avec le mot de passe
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'password', 'email', 'fullName', 'role', 'status'],
+      select: ['id', 'password', 'email', 'fullName', 'status'],
     });
 
     if (!user) {
@@ -217,7 +217,31 @@ export class UsersService {
   }
 
   private toResponseDto(user: User): UserResponseDto {
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword as UserResponseDto;
+    const { password, userRoles, ...userWithoutPassword } = user;
+    const roles = userRoles?.map((ur) => ur.role.name) || [];
+    
+    // Extraire toutes les permissions des roles de l'utilisateur (stockees en JSON)
+    const allPermissions = userRoles?.flatMap((ur) => {
+      const rolePermissions = ur.role.permissions;
+      if (!rolePermissions || typeof rolePermissions !== 'object') {
+        return [];
+      }
+      // Transformer la structure JSON en liste de permissions (module.action)
+      return Object.entries(rolePermissions).flatMap(([module, actions]) => {
+        if (Array.isArray(actions)) {
+          return actions.map((action) => `${module}.${action}`);
+        }
+        return [];
+      });
+    }) || [];
+    
+    // Supprimer les doublons
+    const permissions = [...new Set(allPermissions)];
+    
+    return {
+      ...userWithoutPassword,
+      roles,
+      permissions,
+    };
   }
 }

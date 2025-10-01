@@ -11,7 +11,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class LoginDto {
   @ApiProperty({
     description: "Email de l'utilisateur",
-    example: 'user@digifaz.com',
+    example: 'test@test.com',
   })
   @IsEmail({}, { message: 'Email invalide' })
   @IsNotEmpty({ message: 'Email requis' })
@@ -19,7 +19,7 @@ export class LoginDto {
 
   @ApiProperty({
     description: 'Mot de passe',
-    example: 'password123',
+    example: 'P@ssword',
   })
   @IsString({ message: 'Mot de passe doit être une chaine' })
   @IsNotEmpty({ message: 'Mot de passe requis' })
@@ -38,7 +38,7 @@ export class RegisterDto {
 
   @ApiProperty({
     description: "Email de l'utilisateur",
-    example: 'user@digifaz.com',
+    example: 'test@test.com',
   })
   @IsEmail({}, { message: 'Email invalide' })
   @IsNotEmpty({ message: 'Email requis' })
@@ -46,7 +46,7 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'Mot de passe',
-    example: 'password123',
+    example: 'P@ssword',
   })
   @IsString({ message: 'Mot de passe doit être une chaine' })
   @IsNotEmpty({ message: 'Mot de passe requis' })
@@ -63,16 +63,16 @@ export class RegisterDto {
   phone?: string;
 
   @ApiProperty({
-    description: "Rôle de l'utilisateur (optionnel, défaut: user)",
-    enum: ['admin', 'priest', 'parish_admin', 'user'],
-    example: 'user',
+    description: "Rôle par défaut de l'utilisateur (optionnel, défaut: parishioner)",
+    enum: ['super_admin', 'parish_manager', 'priest', 'treasurer', 'secretary', 'volunteer', 'parishioner'],
+    example: 'parishioner',
     required: false,
   })
   @IsOptional()
-  @IsEnum(['admin', 'priest', 'parish_admin', 'user'], {
-    message: 'Rôle doit être: admin, priest, parish_admin ou user',
+  @IsEnum(['super_admin', 'parish_manager', 'priest', 'treasurer', 'secretary', 'volunteer', 'parishioner'], {
+    message: 'Rôle doit être: super_admin, parish_manager, priest, treasurer, secretary, volunteer ou parishioner',
   })
-  role?: string;
+  defaultRole?: string;
 }
 
 export class AuthResponseDto {
@@ -88,15 +88,17 @@ export class AuthResponseDto {
       id: 'uuid-1234-5678-9012',
       email: 'user@digifaz.com',
       fullName: 'Jean Dupont',
-      role: 'user',
       status: 'active',
+      roles: ['volunteer'],
+      permissions: ['users.read', 'masses.read', 'parishes.read'],
     },
   })
   user: {
     id: string;
     email: string;
     fullName: string;
-    role: string;
     status: string;
+    roles: string[];
+    permissions: string[];
   };
 }

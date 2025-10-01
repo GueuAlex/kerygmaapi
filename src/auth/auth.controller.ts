@@ -160,8 +160,8 @@ Authentifie un utilisateur existant et retourne un token JWT.
         summary: 'Utilisateur standard',
         description: "Connexion d'un utilisateur standard",
         value: {
-          email: 'marie.nguema@digifaz.com',
-          password: 'motdepasse123',
+          email: 'test@test.com',
+          password: 'P@ssword',
         },
       },
       admin: {
@@ -169,7 +169,7 @@ Authentifie un utilisateur existant et retourne un token JWT.
         description: "Connexion d'un administrateur",
         value: {
           email: 'admin@digifaz.com',
-          password: 'admin123',
+          password: 'P@ssword',
         },
       },
     },
@@ -255,8 +255,8 @@ Retourne les informations du profil de l'utilisateur actuellement connecté.
       error: 'Unauthorized',
     },
   })
-  getProfile(@Request() req: { user: any }) {
-    return req.user;
+  async getProfile(@Request() req: { user: any }) {
+    return await this.authService.getProfile(req.user.userId);
   }
 
   @Public()

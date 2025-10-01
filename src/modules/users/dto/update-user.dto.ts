@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole, UserStatus } from '../entities/user.entity';
+import { UserStatus } from '../entities/user.entity';
 
 export class UpdateUserDto {
   @ApiProperty({
@@ -30,16 +30,6 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString({ message: 'Téléphone doit être une chaine' })
   phone?: string;
-
-  @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
-    enum: UserRole,
-    example: UserRole.USER,
-    required: false,
-  })
-  @IsOptional()
-  @IsEnum(UserRole, { message: 'Rôle invalide' })
-  role?: UserRole;
 
   @ApiProperty({
     description: 'Statut du compte utilisateur',

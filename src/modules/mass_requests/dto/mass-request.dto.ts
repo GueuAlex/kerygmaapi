@@ -72,6 +72,44 @@ export class CreateMassRequestDto {
   mass_request_type_id: number;
 
   @ApiPropertyOptional({
+    description: `
+**Mode 1 : Sélection d'une messe existante**
+
+ID de la messe choisie dans le calendrier liturgique.
+
+- Si fourni : \`scheduled_date\` sera auto-rempli avec la date de la messe
+- Si fourni avec \`scheduled_date\` : vérification de cohérence
+- Obtenir la liste : \`GET /mass-requests/available-masses\`
+
+⚠️ **Validation** : Au moins \`mass_calendar_id\` OU \`scheduled_date\` requis
+    `,
+    example: 5,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'mass_calendar_id doit être un nombre' })
+  @IsPositive({ message: 'mass_calendar_id doit être positif' })
+  @Type(() => Number)
+  mass_calendar_id?: number;
+
+  @ApiPropertyOptional({
+    description: `
+**Mode 2 : Date libre personnalisée**
+
+Date souhaitée pour la célébration au format YYYY-MM-DD.
+
+- Si seul : \`mass_calendar\` sera \`null\` dans la réponse
+- Si fourni avec \`mass_calendar_id\` : doit correspondre à la date de la messe
+- Interdiction des dates passées
+
+⚠️ **Validation** : Au moins \`mass_calendar_id\` OU \`scheduled_date\` requis
+    `,
+    example: '2025-12-25',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Format de date invalide (YYYY-MM-DD)' })
+  scheduled_date?: string;
+
+  @ApiPropertyOptional({
     description: 'Message additionnel ou intentions spéciales',
     example: 'Messe en mémoire de notre père décédé le 15 décembre 2024',
   })
@@ -89,6 +127,15 @@ export class CreateMassRequestDto {
   @IsPositive()
   @Type(() => Number)
   total_amount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Statut initial de la demande',
+    enum: MassRequestStatus,
+    example: MassRequestStatus.PENDING_PAYMENT,
+  })
+  @IsOptional()
+  @IsEnum(MassRequestStatus)
+  status?: MassRequestStatus;
 }
 
 export class UpdateMassRequestDto {
@@ -304,6 +351,30 @@ export class MassRequestResponseDto {
     type: () => MassRequestTypeBasicDto,
   })
   mass_request_type: MassRequestTypeBasicDto;
+
+  @ApiProperty({
+    description: 'Messe programmée dans le calendrier (null si date libre)',
+    type: () => Object,
+    nullable: true,
+  })
+  mass_calendar: {
+    id: number;
+    mass_date: string;
+    start_time: string;
+    end_time: string;
+    location: string;
+    celebration_type: {
+      id: number;
+      name: string;
+      description: string;
+    };
+  } | null;
+
+  @ApiProperty({
+    description: 'Date de célébration programmée',
+    example: '2025-12-25',
+  })
+  scheduled_date: string;
 
   @ApiProperty({
     description: 'Message additionnel',

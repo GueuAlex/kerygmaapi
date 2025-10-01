@@ -10,6 +10,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { MassRequestType } from './mass-request-type.entity';
 import { Transaction } from '../../payments/entities/transaction.entity';
+import { MassCalendar } from '../../masses/entities/mass-calendar.entity';
 
 @Entity('mass_requests')
 export class MassRequest {
@@ -32,6 +33,13 @@ export class MassRequest {
   @ManyToOne(() => MassRequestType)
   @JoinColumn({ name: 'mass_request_type_id' })
   mass_request_type: MassRequestType;
+
+  @ManyToOne(() => MassCalendar)
+  @JoinColumn({ name: 'mass_calendar_id' })
+  mass_calendar: MassCalendar;
+
+  @Column({ type: 'date', nullable: true })
+  scheduled_date: string;
 
   @Column({ type: 'text', nullable: true })
   message_additionnel: string;

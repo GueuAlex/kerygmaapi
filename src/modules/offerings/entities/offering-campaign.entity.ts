@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
@@ -86,25 +87,6 @@ export class OfferingCampaign {
   image_url: string;
 
   @ApiProperty({
-    description: 'Configuration de la campagne',
-    example: {
-      is_public: true,
-      allow_anonymous: true,
-      send_receipts: true,
-      notification_threshold: 100000,
-    },
-    required: false,
-  })
-  @Column({ type: 'json', nullable: true })
-  settings: {
-    is_public?: boolean;
-    allow_anonymous?: boolean;
-    send_receipts?: boolean;
-    notification_threshold?: number;
-    custom_fields?: string[];
-  };
-
-  @ApiProperty({
     description: 'ID de l\'utilisateur créateur de la campagne',
     example: 'de037ba6-d617-4892-b57f-d74191bc4550',
   })
@@ -124,4 +106,11 @@ export class OfferingCampaign {
   })
   @UpdateDateColumn()
   updated_at: Date;
+
+  // Relations
+  @OneToMany(() => Offering, (offering) => offering.campaign)
+  offerings: Offering[];
 }
+
+// Import Offering ici pour eviter les dependances circulaires
+import { Offering } from './offering.entity';

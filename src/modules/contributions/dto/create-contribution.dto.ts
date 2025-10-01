@@ -14,15 +14,6 @@ export enum ContributionMethod {
 }
 
 export class CreateContributionDto {
-  @ApiProperty({
-    description: 'ID de la carte de contribution',
-    example: 1,
-  })
-  @IsNumber()
-  @IsPositive()
-  @Type(() => Number)
-  card_id: number;
-
   @ApiPropertyOptional({
     description: "ID de l'utilisateur contributeur (optionnel pour especes)",
     example: 'uuid-string',
@@ -76,13 +67,13 @@ export class ContributionResponseDto {
   @ApiProperty({
     description: 'Carte associee',
     example: {
-      id: 1,
+      id: '47057c70-71c6-48bd-bd48-d7a669c6b271',
       card_number: 'CARD-2025-000001',
       campaign_name: 'Construction Nouvelle Eglise 2025',
     },
   })
   card: {
-    id: number;
+    id: string;
     card_number: string;
     campaign_name: string;
   };
@@ -153,7 +144,7 @@ export class ContributionResponseDto {
     example: 'Contribution lors de la messe dominicale',
     nullable: true,
   })
-  notes: string | null;
+  notes?: string;
 
   @ApiProperty({
     description: 'Date de creation',

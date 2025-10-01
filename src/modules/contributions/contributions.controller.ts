@@ -11,15 +11,15 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ContributionsService } from './contributions.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
 import { Request } from 'express';
-import { UserRole } from '../../modules/users/entities/user.entity';
 import {
   CreateCampaignDto,
   UpdateCampaignDto,
@@ -30,10 +30,14 @@ import {
   CreateCardDto,
   CardResponseDto,
 } from './dto/contribution-card.dto';
+import {
+  CreateContributionDto,
+  ContributionResponseDto,
+} from './dto/create-contribution.dto';
 
 @ApiTags('Contributions')
 @Controller('contributions')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class ContributionsController {
   constructor(private readonly contributionsService: ContributionsService) {}
@@ -46,12 +50,24 @@ export class ContributionsController {
     description: `
     Permet aux administrateurs de créer une nouvelle campagne de cotisation.
     
-    **Fonctionnalités :**
+    **Fonctionnalités principales :**
     - Création de campagnes avec montants fixes ou variables
-    - Définition de périodes de validité
+    - Définition de périodes de validité et ciblage des participants
+    - Configuration d'objectifs financiers et de participation
     - Gestion automatique du statut de la campagne
     
-    **Permissions requises :** ADMIN ou PARISH_ADMIN
+    **Nouveaux champs de ciblage :**
+    - target_group : Définit le groupe cible (all, adults, youth, families, specific)
+    - target_participant_count : Nombre souhaité de participants
+    - target_amount : Objectif financier total en FCFA
+    - minimum_individual_amount : Contribution minimum individuelle
+    
+    **Exemples :**
+    - Cotisation annuelle : is_fixed_amount=true, target_group=adults, fixed_amount=25000
+    - Construction : is_fixed_amount=false, target_group=all, target_amount=50000000
+    - Activités jeunes : is_fixed_amount=false, target_group=youth, target_amount=2000000
+    
+    **Permissions requises :** contributions.create
     `,
   })
   @ApiResponse({
@@ -67,6 +83,10 @@ export class ContributionsController {
         end_date: '2025-12-31',
         is_fixed_amount: false,
         fixed_amount: null,
+        target_group: 'all',
+        target_participant_count: 300,
+        target_amount: 10000000,
+        minimum_individual_amount: 5000,
         status: 'active',
         total_cards: 0,
         total_collected: 0,
@@ -102,7 +122,7 @@ export class ContributionsController {
     schema: {
       example: {
         statusCode: 403,
-        message: 'Accès refusé. Rôle ADMIN ou PARISH_ADMIN requis.',
+        message: 'Accès refusé. Permission contributions.create requise.',
         error: 'Forbidden',
       },
     },
@@ -118,7 +138,7 @@ export class ContributionsController {
       },
     },
   })
-  @Roles(UserRole.ADMIN, UserRole.PARISH_ADMIN)
+  @Permissions.Contributions.Create()
   async createCampaign(
     @Body() createDto: CreateCampaignDto,
     @Req() req: Request,
@@ -136,7 +156,7 @@ export class ContributionsController {
     status: 200,
     description: 'Liste des campagnes recuperee avec succes',
   })
-  @Roles(UserRole.ADMIN, UserRole.PARISH_ADMIN)
+  @Permissions.Contributions.Read()
   async findAllCampaigns(@Query() queryDto: QueryCampaignsDto) {
     return this.contributionsService.findAllCampaigns(queryDto);
   }
@@ -151,7 +171,7 @@ export class ContributionsController {
     description: 'Details de la campagne',
     type: CampaignResponseDto,
   })
-  @Roles(UserRole.ADMIN, UserRole.PARISH_ADMIN)
+  @Permissions.Contributions.Read()
   async findCampaignById(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<CampaignResponseDto> {
@@ -168,7 +188,7 @@ export class ContributionsController {
     description: 'Campagne modifiee avec succes',
     type: CampaignResponseDto,
   })
-  @Roles(UserRole.ADMIN, UserRole.PARISH_ADMIN)
+  @Permissions.Contributions.Update()
   async updateCampaign(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateCampaignDto,
@@ -186,7 +206,7 @@ export class ContributionsController {
     status: 204,
     description: 'Campagne supprimee avec succes',
   })
-  @Roles(UserRole.ADMIN)
+  @Permissions.Contributions.Delete()
   async deleteCampaign(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.contributionsService.deleteCampaign(id);
   }
@@ -203,9 +223,111 @@ export class ContributionsController {
     description: 'Carte creee avec succes',
     type: CardResponseDto,
   })
-  @Roles(UserRole.ADMIN, UserRole.PARISH_ADMIN)
+  @Permissions.Contributions.Create()
   async createCard(@Body() createDto: CreateCardDto): Promise<CardResponseDto> {
     return this.contributionsService.createCard(createDto);
+  }
+
+  // ========================= CONTRIBUTIONS =========================
+
+  @Post('cards/:cardId/contribute')
+  @ApiOperation({
+    summary: 'Ajouter une contribution à une carte',
+    description: `
+    Permet d'enregistrer une nouvelle contribution sur une carte de cotisation.
+    
+    **Modes de contribution :**
+    - **En ligne (online)** : Contribution via paiement mobile/carte bancaire
+    - **En espèces (cash_on_site)** : Contribution collectée physiquement
+    
+    **Fonctionnalités :**
+    - Enregistrement de la contribution dans contributions
+    - Mise à jour automatique du current_balance de la carte
+    - Traçabilité complète (qui, quand, combien, comment)
+    - Lien avec le système de paiements pour les contributions en ligne
+    
+    **Validation :**
+    - La carte doit exister et être active
+    - Le montant doit être positif
+    - Pour cash_on_site : collected_by_user_id obligatoire
+    - Pour online : contributor_user_id recommandé
+    
+    **Permissions requises :** contributions.create
+    `,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Contribution enregistrée avec succès',
+    type: ContributionResponseDto,
+    schema: {
+      example: {
+        id: 1,
+        card: {
+          id: '47057c70-71c6-48bd-bd48-d7a669c6b271',
+          card_number: 'CARD-2025-000002',
+          campaign_name: 'Test avec nouveaux champs',
+        },
+        contributor_user: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          email: 'test@test.com',
+        },
+        amount: 5000,
+        contribution_method: 'online',
+        collected_by_user: null,
+        payment: null,
+        contribution_date: '2025-09-30T12:00:00.000Z',
+        notes: 'Contribution via application mobile',
+        created_at: '2025-09-30T12:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'collected_by_user_id requis pour les contributions en espèces',
+        error: 'Bad Request',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Carte non trouvée',
+    schema: {
+      example: {
+        statusCode: 404,
+        message: 'Carte de contribution non trouvée',
+        error: 'Not Found',
+      },
+    },
+  })
+  @Permissions.Contributions.Create()
+  async addContribution(
+    @Param('cardId', ParseUUIDPipe) cardId: string,
+    @Body() createDto: CreateContributionDto,
+    @Req() req: Request,
+  ): Promise<ContributionResponseDto> {
+    const userId = (req as any).user?.id;
+    return this.contributionsService.addContribution(cardId, createDto, userId);
+  }
+
+  @Get('cards/:cardId/contributions')
+  @ApiOperation({
+    summary: 'Lister les contributions d\'une carte',
+    description: 'Recupere la liste des contributions pour une carte donnée',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des contributions de la carte',
+    type: [ContributionResponseDto],
+  })
+  @Permissions.Contributions.Read()
+  async getCardContributions(
+    @Param('cardId', ParseUUIDPipe) cardId: string,
+  ) {
+    return this.contributionsService.getCardContributions(cardId);
   }
 
   @Get('cards/:id')
@@ -218,8 +340,9 @@ export class ContributionsController {
     description: 'Details de la carte',
     type: CardResponseDto,
   })
+  @Permissions.Contributions.Read()
   async findCardById(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CardResponseDto> {
     return this.contributionsService.findCardById(id);
   }

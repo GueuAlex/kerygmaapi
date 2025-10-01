@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole, UserStatus } from '../entities/user.entity';
+import { UserStatus } from '../entities/user.entity';
 
 export class UserResponseDto {
   @ApiProperty({
@@ -28,11 +28,18 @@ export class UserResponseDto {
   phone?: string;
 
   @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
-    enum: UserRole,
-    example: UserRole.USER
+    description: 'Rôles de l\'utilisateur',
+    example: ['volunteer'],
+    type: [String]
   })
-  role: UserRole;
+  roles: string[];
+
+  @ApiProperty({
+    description: 'Permissions de l\'utilisateur basées sur ses rôles',
+    example: ['users.read', 'offerings.create'],
+    type: [String]
+  })
+  permissions: string[];
 
   @ApiProperty({
     description: 'Statut du compte utilisateur',

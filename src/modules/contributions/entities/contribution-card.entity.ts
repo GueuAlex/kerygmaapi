@@ -19,8 +19,8 @@ import { CardContribution } from './card-contribution.entity';
 @Index('idx_card_campaign', ['campaign'])
 @Index('idx_card_phone', ['phone_number'])
 export class ContributionCard {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => ContributionCampaign, (campaign) => campaign.cards)
   @JoinColumn({ name: 'campaign_id' })

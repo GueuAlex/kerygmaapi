@@ -42,11 +42,30 @@ export class RolesController {
 🔒 **Endpoint protégé** - Réservé aux administrateurs
 
 Crée les rôles par défaut du système avec leurs permissions :
-- **super_admin** : Tous les droits
-- **parish_priest** : Curé de paroisse
-- **treasurer** : Trésorier
-- **secretary** : Secrétaire
-- **basic_user** : Utilisateur de base
+
+### Rôles Administratifs
+- **super_admin** : Administrateur système avec tous les privilèges
+- **parish_manager** : Gestionnaire de paroisse avec privilèges étendus
+
+### Rôles Spirituels
+- **priest** : Prêtre avec accès aux fonctions liturgiques et pastorales
+
+### Rôles Fonctionnels  
+- **treasurer** : Trésorier avec accès aux fonctions financières
+- **secretary** : Secrétaire avec accès aux fonctions administratives
+
+### Rôles Utilisateurs
+- **volunteer** : Bénévole avec accès limité aux fonctions de base
+- **parishioner** : Paroissien/utilisateur normal avec accès aux services principaux
+
+**Permissions par rôle :**
+- **super_admin** : Tous les modules (CRUD complet + gestion système)
+- **parish_manager** : Users (RU), Parishes (RU), Masses/Offerings/Contributions (CRUD), Payments (RU), Reports (CR), Notifications (CRU)
+- **priest** : Users/Parishes (R), Masses (CRU), autres modules (R)
+- **treasurer** : Users/Parishes/Masses (R), Offerings/Contributions/Payments (CRU), Reports (CR)
+- **secretary** : Users (CRU), Parishes (RU), Masses (CRU), autres (R), Notifications (CRU)
+- **volunteer** : Accès lecture uniquement (Users, Parishes, Masses, Offerings, Contributions)
+- **parishioner** : Users/Parishes (R), Masses/Offerings/Contributions/Payments (CR)
 
 **Sécurité :** Ne crée que les rôles qui n'existent pas encore.
     `,
@@ -124,14 +143,22 @@ Crée un nouveau rôle personnalisé avec ses permissions spécifiques.
 **Structure des permissions :**
 \`\`\`json
 {
-  "resource_name": ["action1", "action2"],
-  "finances": ["read", "write"],
-  "users": ["read"],
-  "*": ["*"]  // Super admin (tous droits)
+  "users": ["create", "read", "update", "delete"],
+  "parishes": ["create", "read", "update", "delete"],
+  "masses": ["create", "read", "update", "delete"],
+  "offerings": ["create", "read", "update", "delete"],
+  "contributions": ["create", "read", "update", "delete"],
+  "payments": ["create", "read", "update", "delete"],
+  "roles": ["create", "read", "update", "delete"],
+  "reports": ["create", "read", "update", "delete"],
+  "notifications": ["create", "read", "update", "delete"],
+  "system": ["manage_settings", "view_logs", "backup_restore"]
 }
 \`\`\`
 
-**Actions courantes :** read, write, delete, *
+**Modules disponibles :** users, parishes, masses, offerings, contributions, payments, roles, reports, notifications, system
+**Actions courantes :** create, read, update, delete
+**Actions spéciales (system) :** manage_settings, view_logs, backup_restore
     `,
   })
   @ApiResponse({
@@ -238,9 +265,13 @@ Retourne uniquement les permissions d'un rôle spécifique dans un format détai
     status: 200,
     description: 'Permissions du rôle récupérées avec succès',
     example: {
-      finances: ['read', 'write'],
       users: ['read'],
-      reports: ['read', 'write']
+      parishes: ['read'],
+      masses: ['read'],
+      offerings: ['create', 'read', 'update'],
+      contributions: ['create', 'read', 'update'],
+      payments: ['create', 'read', 'update'],
+      reports: ['create', 'read']
     },
   })
   @ApiResponse({

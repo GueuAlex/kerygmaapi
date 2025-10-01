@@ -7,6 +7,7 @@ import { MassRequest } from './entities/mass-request.entity';
 import { MassRequestDetail } from './entities/mass-request-detail.entity';
 import { MassRequestSchedule } from './entities/mass-request-schedule.entity';
 import { User } from '../users/entities/user.entity';
+import { MassCalendar } from '../masses/entities/mass-calendar.entity';
 import {
   CreateMassRequestTypeDto,
   UpdateMassRequestTypeDto,
@@ -34,6 +35,8 @@ export class MassRequestsService {
     private readonly massRequestScheduleRepository: Repository<MassRequestSchedule>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(MassCalendar)
+    private readonly massCalendarRepository: Repository<MassCalendar>,
   ) {}
 
   // ========== MASS REQUEST TYPES ==========
@@ -122,9 +125,49 @@ export class MassRequestsService {
     return { message: `Type de demande "${type.name}" supprimé avec succès` };
   }
 
+  // ========== MASS CALENDAR (Available Masses) ==========
+
+  async findAvailableMasses(fromDate?: string): Promise<any[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Date de début : aujourd'hui ou date spécifiée
+    const startDate = fromDate ? new Date(fromDate) : today;
+    
+    const queryBuilder = this.massCalendarRepository.createQueryBuilder('mass')
+      .leftJoinAndSelect('mass.celebration_type', 'celebration_type')
+      .where('mass.status = :status', { status: 'active' })
+      .andWhere('mass.mass_date >= :startDate', { startDate: startDate.toISOString().split('T')[0] })
+      .orderBy('mass.mass_date', 'ASC')
+      .addOrderBy('mass.start_time', 'ASC');
+
+    const masses = await queryBuilder.getMany();
+
+    return masses.map(mass => ({
+      id: mass.id,
+      mass_date: mass.mass_date,
+      start_time: mass.start_time,
+      end_time: mass.end_time,
+      location: mass.location,
+      status: mass.status,
+      notes: mass.notes,
+      celebration_type: {
+        id: mass.celebration_type.id,
+        name: mass.celebration_type.name,
+        description: mass.celebration_type.description,
+      },
+      display_name: `${mass.celebration_type.name} - ${mass.mass_date} à ${mass.start_time}${mass.location ? ` (${mass.location})` : ''}`,
+    }));
+  }
+
   // ========== MASS REQUESTS ==========
 
   async createMassRequest(createDto: CreateMassRequestDto, currentUserId?: string): Promise<MassRequestResponseDto> {
+    // Validation : au moins mass_calendar_id OU scheduled_date doit être fourni
+    if (!createDto.mass_calendar_id && !createDto.scheduled_date) {
+      throw new BadRequestException('Vous devez fournir soit mass_calendar_id soit scheduled_date');
+    }
+
     // Vérifier que le type de demande existe
     const massRequestType = await this.massRequestTypeRepository.findOne({
       where: { id: createDto.mass_request_type_id, is_active: true },
@@ -132,6 +175,50 @@ export class MassRequestsService {
 
     if (!massRequestType) {
       throw new NotFoundException(`Type de demande avec l'ID ${createDto.mass_request_type_id} non trouvé ou inactif`);
+    }
+
+    let massCalendar: MassCalendar | null = null;
+    let finalScheduledDate: string;
+
+    // Scénario 1: L'utilisateur choisit une messe existante (mass_calendar_id fourni)
+    if (createDto.mass_calendar_id) {
+      massCalendar = await this.massCalendarRepository.findOne({
+        where: { 
+          id: createDto.mass_calendar_id, 
+          status: 'active'
+        },
+        relations: ['celebration_type'],
+      });
+
+      if (!massCalendar) {
+        throw new NotFoundException(`Messe avec l'ID ${createDto.mass_calendar_id} non trouvée ou indisponible`);
+      }
+
+      // Vérifier si des demandes peuvent encore être acceptées pour cette messe
+      if (massCalendar.status === 'disabled_requests') {
+        throw new BadRequestException('Les demandes sont fermées pour cette messe');
+      }
+
+      // Auto-remplir scheduled_date avec la date de la messe
+      finalScheduledDate = createDto.scheduled_date || massCalendar.mass_date;
+
+      // Si scheduled_date est fourni, vérifier qu'il correspond à la messe
+      if (createDto.scheduled_date && createDto.scheduled_date !== massCalendar.mass_date) {
+        throw new BadRequestException(`La date fournie (${createDto.scheduled_date}) ne correspond pas à la date de la messe sélectionnée (${massCalendar.mass_date})`);
+      }
+    } 
+    // Scénario 2: L'utilisateur choisit une date libre (scheduled_date seulement)
+    else {
+      finalScheduledDate = createDto.scheduled_date!;
+    }
+
+    // Vérifier que la date n'est pas dans le passé
+    const massDate = new Date(finalScheduledDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (massDate < today) {
+      throw new BadRequestException('Impossible de programmer une demande pour une date passée');
     }
 
     let requesterUser: User | null = null;
@@ -149,19 +236,26 @@ export class MassRequestsService {
     // Calculer le montant total si non fourni
     const totalAmount = createDto.total_amount || massRequestType.base_amount;
 
+    // Créer la demande de messe
     const massRequest = this.massRequestRepository.create({
       requester_name: createDto.requester_name,
       requester_phone: createDto.requester_phone,
       requester_email: createDto.requester_email,
       message_additionnel: createDto.message_additionnel,
       total_amount: totalAmount,
-      status: MassRequestStatus.PENDING_PAYMENT,
+      scheduled_date: finalScheduledDate,
+      status: createDto.status || MassRequestStatus.PENDING_PAYMENT,
     });
 
     if (requesterUser) {
       massRequest.requester_user = requesterUser;
     }
     massRequest.mass_request_type = massRequestType;
+    
+    // Associer la messe du calendrier si elle existe
+    if (massCalendar) {
+      massRequest.mass_calendar = massCalendar;
+    }
 
     const savedRequest = await this.massRequestRepository.save(massRequest);
 
@@ -231,7 +325,7 @@ export class MassRequestsService {
   async findMassRequestById(id: number): Promise<MassRequestResponseDto> {
     const request = await this.massRequestRepository.findOne({
       where: { id },
-      relations: ['mass_request_type', 'requester_user'],
+      relations: ['mass_request_type', 'requester_user', 'mass_calendar', 'mass_calendar.celebration_type'],
     });
 
     if (!request) {
@@ -429,6 +523,19 @@ export class MassRequestsService {
         name: request.mass_request_type.name,
         base_amount: request.mass_request_type.base_amount,
       },
+      mass_calendar: request.mass_calendar ? {
+        id: request.mass_calendar.id,
+        mass_date: request.mass_calendar.mass_date,
+        start_time: request.mass_calendar.start_time,
+        end_time: request.mass_calendar.end_time,
+        location: request.mass_calendar.location,
+        celebration_type: {
+          id: request.mass_calendar.celebration_type.id,
+          name: request.mass_calendar.celebration_type.name,
+          description: request.mass_calendar.celebration_type.description,
+        },
+      } : null,
+      scheduled_date: request.scheduled_date,
       message_additionnel: request.message_additionnel,
       status: request.status as MassRequestStatus,
       total_amount: request.total_amount,

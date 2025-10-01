@@ -9,13 +9,13 @@ export class RoleResponseDto {
 
   @ApiProperty({
     description: 'Nom du rôle',
-    example: 'gestionnaire_finances',
+    example: 'treasurer',
   })
   name: string;
 
   @ApiProperty({
     description: 'Description du rôle',
-    example: 'Gestionnaire des finances de la paroisse',
+    example: 'Tresorier avec acces aux fonctions financieres',
     required: false,
   })
   description?: string;
@@ -23,8 +23,13 @@ export class RoleResponseDto {
   @ApiProperty({
     description: 'Permissions du rôle',
     example: {
-      finances: ['read', 'write'],
-      users: ['read']
+      users: ['read'],
+      parishes: ['read'],
+      masses: ['read'],
+      offerings: ['create', 'read', 'update'],
+      contributions: ['create', 'read', 'update'],
+      payments: ['create', 'read', 'update'],
+      reports: ['create', 'read']
     },
     required: false,
   })
@@ -53,9 +58,13 @@ export class UserRolesResponseDto {
   @ApiProperty({
     description: 'Permissions effectives calculées',
     example: {
-      finances: ['read', 'write'],
       users: ['read'],
-      reports: ['read']
+      parishes: ['read'],
+      masses: ['create', 'read', 'update'],
+      offerings: ['create', 'read', 'update'],
+      contributions: ['create', 'read', 'update'],
+      payments: ['create', 'read', 'update'],
+      reports: ['create', 'read']
     },
   })
   effectivePermissions: Record<string, string[]>;

@@ -103,14 +103,6 @@ export class CreateOfferingDto {
   @IsOptional()
   @IsString()
   campaign_id?: string;
-
-  @ApiPropertyOptional({
-    description: 'ID de la transaction de paiement',
-    example: 123,
-  })
-  @IsOptional()
-  @IsNumber()
-  payment_id?: number;
 }
 
 export class UpdateOfferingDto {
@@ -130,14 +122,6 @@ export class UpdateOfferingDto {
   @IsOptional()
   @IsString()
   message?: string;
-
-  @ApiPropertyOptional({
-    description: 'ID de la transaction de paiement',
-    example: 123,
-  })
-  @IsOptional()
-  @IsNumber()
-  payment_id?: number;
 }
 
 export class OfferingResponseDto {
@@ -198,13 +182,6 @@ export class OfferingResponseDto {
   campaign_id: string | null;
 
   @ApiProperty({
-    description: 'ID de la transaction de paiement',
-    example: 123,
-    nullable: true,
-  })
-  payment_id: number | null;
-
-  @ApiProperty({
     description: 'Date de création de l\'offrande',
     example: '2025-01-15T10:30:00Z',
   })
@@ -223,7 +200,7 @@ export class QueryOfferingsDto {
     example: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value) : undefined)
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @IsNumber()
   offering_type_id?: number;
 
@@ -293,7 +270,7 @@ export class QueryOfferingsDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value) : undefined)
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @IsNumber()
   page?: number;
 
@@ -303,7 +280,7 @@ export class QueryOfferingsDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value) : undefined)
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @IsNumber()
   limit?: number;
 

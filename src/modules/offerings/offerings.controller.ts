@@ -9,8 +9,8 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  ParseUUIDPipe,
   ValidationPipe,
-  NotFoundException,
   ForbiddenException,
   BadRequestException,
   Request,
@@ -44,14 +44,14 @@ import {
 } from './dto/offering.dto';
 
 import {
-  CreateCampaignDto,
-  UpdateCampaignDto,
-  CampaignResponseDto,
-  QueryCampaignsDto,
-  CampaignsListResponseDto,
+  CreateOfferingCampaignDto,
+  UpdateOfferingCampaignDto,
+  OfferingCampaignResponseDto,
+  QueryOfferingCampaignsDto,
+  OfferingCampaignsListResponseDto,
 } from './dto/offering-campaign.dto';
 
-import { RequirePermissions } from '../../auth/decorators/permissions.decorator';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
 
 @ApiTags('Offrandes')
 @Controller('offerings')
@@ -77,7 +77,7 @@ export class OfferingsController {
   @ApiResponse({ status: 401, description: 'Non authentifie' })
   @ApiResponse({ status: 403, description: 'Permissions insuffisantes' })
   @ApiResponse({ status: 409, description: "Type d'offrande deja existant" })
-  @RequirePermissions('offerings', 'create')
+  @Permissions.Offerings.Create()
   async createOfferingType(
     @Body(ValidationPipe) createOfferingTypeDto: CreateOfferingTypeDto,
   ): Promise<OfferingTypeResponseDto> {
@@ -110,7 +110,7 @@ export class OfferingsController {
     required: false,
     description: "Nombre d'elements par page",
   })
-  @RequirePermissions('offerings', 'read')
+  @Permissions.Offerings.Read()
   async getOfferingTypes(
     @Query(ValidationPipe) query: QueryOfferingTypesDto,
   ): Promise<OfferingTypesListResponseDto> {
@@ -129,7 +129,7 @@ export class OfferingsController {
     type: OfferingTypeResponseDto,
   })
   @ApiResponse({ status: 404, description: "Type d'offrande non trouve" })
-  @RequirePermissions('offerings', 'read')
+  @Permissions.Offerings.Read()
   async getOfferingType(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<OfferingTypeResponseDto> {
@@ -149,7 +149,7 @@ export class OfferingsController {
   })
   @ApiResponse({ status: 400, description: 'Donnees invalides' })
   @ApiResponse({ status: 404, description: "Type d'offrande non trouve" })
-  @RequirePermissions('offerings', 'update')
+  @Permissions.Offerings.Update()
   async updateOfferingType(
     @Param('id', ParseIntPipe) id: number,
     @Body(ValidationPipe) updateOfferingTypeDto: UpdateOfferingTypeDto,
@@ -169,7 +169,7 @@ export class OfferingsController {
     status: 409,
     description: "Type d'offrande utilise par des offrandes",
   })
-  @RequirePermissions('offerings', 'delete')
+  @Permissions.Offerings.Delete()
   async deleteOfferingType(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
@@ -193,12 +193,15 @@ export class OfferingsController {
     status: 404,
     description: "Type d'offrande ou campagne non trouve",
   })
-  @RequirePermissions('offerings', 'create')
+  @Permissions.Offerings.Create()
   async createOffering(
     @Body(ValidationPipe) createOfferingDto: CreateOfferingDto,
     @Request() req: { user: any },
   ): Promise<OfferingResponseDto> {
-    return this.offeringsService.createOffering(createOfferingDto, req.user.id);
+    return this.offeringsService.createOffering(
+      createOfferingDto,
+      req.user.userId,
+    );
   }
 
   @Get()
@@ -236,7 +239,7 @@ export class OfferingsController {
     required: false,
     description: 'Date de fin (YYYY-MM-DD)',
   })
-  @RequirePermissions('offerings', 'read')
+  @Permissions.Offerings.Read()
   async getOfferings(
     @Query(ValidationPipe) query: QueryOfferingsDto,
   ): Promise<OfferingsListResponseDto> {
@@ -255,7 +258,7 @@ export class OfferingsController {
     type: OfferingResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Offrande non trouvee' })
-  @RequirePermissions('offerings', 'read')
+  @Permissions.Offerings.Read()
   async getOffering(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<OfferingResponseDto> {
@@ -275,7 +278,7 @@ export class OfferingsController {
   })
   @ApiResponse({ status: 400, description: 'Donnees invalides' })
   @ApiResponse({ status: 404, description: 'Offrande non trouvee' })
-  @RequirePermissions('offerings', 'update')
+  @Permissions.Offerings.Update()
   async updateOffering(
     @Param('id', ParseIntPipe) id: number,
     @Body(ValidationPipe) updateOfferingDto: UpdateOfferingDto,
@@ -291,7 +294,7 @@ export class OfferingsController {
   @ApiParam({ name: 'id', description: "ID de l'offrande" })
   @ApiResponse({ status: 204, description: 'Offrande supprimee' })
   @ApiResponse({ status: 404, description: 'Offrande non trouvee' })
-  @RequirePermissions('offerings', 'delete')
+  @Permissions.Offerings.Delete()
   async deleteOffering(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.offeringsService.deleteOffering(id);
   }
@@ -306,47 +309,18 @@ export class OfferingsController {
   @ApiResponse({
     status: 201,
     description: 'Campagne creee avec succes',
-    type: CampaignResponseDto,
+    type: OfferingCampaignResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Donnees invalides' })
-  @RequirePermissions('offerings', 'create')
+  @Permissions.Offerings.Create()
   async createCampaign(
-    @Body(ValidationPipe) createCampaignDto: CreateCampaignDto,
+    @Body(ValidationPipe) createCampaignDto: CreateOfferingCampaignDto,
     @Request() req: { user: any },
-  ): Promise<CampaignResponseDto> {
-    return this.offeringsService.createCampaign(createCampaignDto, req.user.id);
-  }
-
-  @Get('campaigns')
-  @ApiOperation({
-    summary: "Lister les campagnes d'offrandes",
-    description: 'Recupere la liste paginee des campagnes avec filtres',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Liste des campagnes',
-    type: CampaignsListResponseDto,
-  })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: 'Recherche par nom',
-  })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    description: 'Filtrer par statut',
-  })
-  @ApiQuery({
-    name: 'is_public',
-    required: false,
-    description: 'Campagnes publiques uniquement',
-  })
-  @RequirePermissions('offerings', 'read')
-  async getCampaigns(
-    @Query(ValidationPipe) query: QueryCampaignsDto,
-  ): Promise<CampaignsListResponseDto> {
-    return this.offeringsService.findAllCampaigns(query);
+  ): Promise<OfferingCampaignResponseDto> {
+    return this.offeringsService.createCampaign(
+      createCampaignDto,
+      req.user.userId,
+    );
   }
 
   @Get('campaigns/:id')
@@ -358,11 +332,13 @@ export class OfferingsController {
   @ApiResponse({
     status: 200,
     description: 'Details de la campagne',
-    type: CampaignResponseDto,
+    type: OfferingCampaignResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Campagne non trouvee' })
-  @RequirePermissions('offerings', 'read')
-  async getCampaign(@Param('id') id: string): Promise<CampaignResponseDto> {
+  @Permissions.Offerings.Read()
+  async getCampaign(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OfferingCampaignResponseDto> {
     return this.offeringsService.findCampaignById(id);
   }
 
@@ -375,20 +351,20 @@ export class OfferingsController {
   @ApiResponse({
     status: 200,
     description: 'Campagne mise a jour',
-    type: CampaignResponseDto,
+    type: OfferingCampaignResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Donnees invalides' })
   @ApiResponse({ status: 404, description: 'Campagne non trouvee' })
-  @RequirePermissions('offerings', 'update')
+  @Permissions.Offerings.Update()
   async updateCampaign(
-    @Param('id') id: string,
-    @Body(ValidationPipe) updateCampaignDto: UpdateCampaignDto,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(ValidationPipe) updateCampaignDto: UpdateOfferingCampaignDto,
     @Request() req: { user: any },
-  ): Promise<CampaignResponseDto> {
+  ): Promise<OfferingCampaignResponseDto> {
     return this.offeringsService.updateCampaign(
       id,
       updateCampaignDto,
-      req.user.id,
+      req.user.userId,
     );
   }
 
@@ -405,56 +381,51 @@ export class OfferingsController {
     status: 409,
     description: 'Campagne utilisee par des offrandes',
   })
-  @RequirePermissions('offerings', 'delete')
+  @Permissions.Offerings.Delete()
   async deleteCampaign(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: any },
   ): Promise<void> {
-    return this.offeringsService.deleteCampaign(id, req.user.id);
+    return this.offeringsService.deleteCampaign(id, req.user.userId);
   }
 
   // === ENDPOINTS PUBLICS (sans authentification) ===
 
   @Get('public/campaigns')
   @ApiOperation({
-    summary: 'Lister les campagnes publiques',
-    description: 'Recupere les campagnes publiques visibles par tous',
+    summary: 'Lister toutes les campagnes d\'offrandes',
+    description: 'Recupere la liste paginee de toutes les campagnes avec filtres',
   })
   @ApiResponse({
     status: 200,
-    description: 'Liste des campagnes publiques',
-    type: CampaignsListResponseDto,
+    description: 'Liste de toutes les campagnes',
+    type: OfferingCampaignsListResponseDto,
   })
-  async getPublicCampaigns(
-    @Query(ValidationPipe) query: QueryCampaignsDto,
-  ): Promise<CampaignsListResponseDto> {
-    const publicQuery = { ...query, is_public: true };
-    return this.offeringsService.findAllCampaigns(publicQuery);
+  async getAllCampaigns(
+    @Query(ValidationPipe) query: QueryOfferingCampaignsDto,
+  ): Promise<OfferingCampaignsListResponseDto> {
+    return this.offeringsService.findAllCampaigns(query);
   }
 
   @Get('public/campaigns/:id')
   @ApiOperation({
-    summary: 'Recuperer une campagne publique',
-    description: "Recupere les details d'une campagne publique",
+    summary: 'Recuperer une campagne',
+    description: "Recupere les details d'une campagne avec statistiques",
   })
   @ApiParam({ name: 'id', description: 'ID de la campagne' })
   @ApiResponse({
     status: 200,
-    description: 'Details de la campagne publique',
-    type: CampaignResponseDto,
+    description: 'Details de la campagne',
+    type: OfferingCampaignResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Campagne non trouvee ou non publique',
+    description: 'Campagne non trouvee',
   })
-  async getPublicCampaign(
-    @Param('id') id: string,
-  ): Promise<CampaignResponseDto> {
-    const campaign = await this.offeringsService.findCampaignById(id);
-    if (!campaign.settings?.is_public) {
-      throw new NotFoundException('Campagne non trouvee ou non publique');
-    }
-    return campaign;
+  async getPublicCampaignDetails(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OfferingCampaignResponseDto> {
+    return this.offeringsService.findCampaignById(id);
   }
 
   @Post('public/offerings')
@@ -479,11 +450,6 @@ export class OfferingsController {
       const campaign = await this.offeringsService.findCampaignById(
         createOfferingDto.campaign_id,
       );
-      if (!campaign.settings?.allow_anonymous) {
-        throw new ForbiddenException(
-          "Cette campagne n'accepte pas les dons anonymes",
-        );
-      }
     }
 
     if (!createOfferingDto.anonymous_donor_info?.full_name) {

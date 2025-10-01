@@ -10,8 +10,8 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { OfferingType } from './offering-type.entity';
+import { OfferingCampaign } from './offering-campaign.entity';
 import { User } from '../../users/entities/user.entity';
-import { Transaction } from '../../payments/entities/transaction.entity';
 
 export enum OfferingStatus {
   PENDING = 'pending',
@@ -116,21 +116,14 @@ export class Offering {
   };
 
   @ApiProperty({
-    description: 'ID de campagne d\'offrande (optionnel)',
-    example: 'christmas-2025',
+    description: 'Campagne d\'offrande associée (optionnelle)',
+    type: () => OfferingCampaign,
     required: false,
   })
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  campaign_id: string;
+  @ManyToOne(() => OfferingCampaign, { nullable: true })
+  @JoinColumn({ name: 'campaign_id' })
+  campaign: OfferingCampaign;
 
-  @ApiProperty({
-    description: 'Transaction de paiement associée',
-    type: () => Transaction,
-    required: false,
-  })
-  @ManyToOne(() => Transaction, { nullable: true })
-  @JoinColumn({ name: 'payment_id' })
-  payment: Transaction;
 
   @ApiProperty({
     description: 'Date de création de l\'offrande',
