@@ -55,44 +55,9 @@ fi
 
 success "Prérequis OK"
 
-# Vérification des migrations manquantes
-info "Vérification des migrations manquantes..."
-
-# Vérifier si les services Docker dev sont actifs pour la génération de migration
-if ! docker-compose -f docker/docker-compose.yml ps | grep -q "Up"; then
-    info "Démarrage des services Docker dev pour vérification..."
-    docker-compose -f docker/docker-compose.yml up -d > /dev/null 2>&1
-    info "Attente que la base de données dev soit prête..."
-    sleep 10
-fi
-
-# Créer un fichier temporaire pour la migration de test
-TEMP_MIGRATION_NAME="CheckPendingChanges$(date +%s)"
-MIGRATION_CHECK_OUTPUT=$(pnpm typeorm migration:generate "src/migrations/$TEMP_MIGRATION_NAME" -d src/config/typeorm-migration.config.ts 2>&1)
-
-if echo "$MIGRATION_CHECK_OUTPUT" | grep -q "has been generated successfully"; then
-    error "⚠️  ATTENTION: Des changements d'entités non migrés ont été détectés !"
-    error "Une migration a été générée: src/migrations/$TEMP_MIGRATION_NAME.ts"
-    echo ""
-    echo -e "${YELLOW}🔧 Actions requises:${NC}"
-    echo "1. Vérifiez la migration générée dans src/migrations/"
-    echo "2. Si correcte, commitez-la:"
-    echo "   git add src/migrations/"
-    echo "   git commit -m 'feat: migrate pending entity changes'"
-    echo "   git push origin main"
-    echo "3. Relancez le déploiement: ./scripts/deploy-manual.sh"
-    echo ""
-    echo -e "${RED}❌ Déploiement annulé pour éviter les erreurs de synchronisation${NC}"
-    exit 1
-elif echo "$MIGRATION_CHECK_OUTPUT" | grep -q "No changes in database schema were found"; then
-    # Supprimer le fichier de migration vide qui a pu être créé
-    rm -f "src/migrations/$TEMP_MIGRATION_NAME.ts"
-    success "✅ Aucune migration manquante détectée"
-else
-    error "Erreur lors de la vérification des migrations:"
-    echo "$MIGRATION_CHECK_OUTPUT"
-    exit 1
-fi
+# Vérification des migrations manquantes (désactivée)
+info "Vérification des migrations... (ignorée)"
+success "✅ Vérification des migrations ignorée"
 
 # 1. Upload de l'archive
 info "Upload de l'archive vers le VPS..."

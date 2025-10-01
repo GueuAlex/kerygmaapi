@@ -12,8 +12,11 @@ const envPath =
 
 config({ path: envPath });
 
-// Pour les commandes CLI, utiliser localhost au lieu de 'db' 
-const host = process.env.DB_HOST === 'db' ? 'localhost' : (process.env.DB_HOST || 'localhost');
+// En production Docker, utiliser 'db', sinon localhost pour le dev local
+const host =
+  process.env.NODE_ENV === 'production'
+    ? process.env.DB_HOST || 'db'
+    : 'localhost';
 
 export default new DataSource({
   type: 'mysql',
